@@ -159,6 +159,38 @@ npm run dev
 
 Open the address Vite prints in the terminal, usually `http://localhost:5173`. Vite may choose `5174` if port `5173` is in use.
 
+## Vercel Deployment
+
+Deploy the backend and frontend as two Vercel projects from the same GitHub repository. This keeps the Supabase connection string on the server and out of browser code.
+
+### 1. Deploy the API
+
+1. In Vercel, choose **Add New → Project** and import this GitHub repository.
+2. Set **Root Directory** to `backend`.
+3. Add these environment variables for Production, Preview, and Development:
+
+```text
+DATABASE_URL=<your Supabase Transaction Pooler URI>
+JWT_SECRET=<a long random secret>
+CLIENT_URL=https://<your-frontend-project>.vercel.app
+```
+
+4. Deploy. Confirm `https://<your-api-project>.vercel.app/api/health` returns `{ "status": "ok" }`.
+
+### 2. Deploy the frontend
+
+1. Create another Vercel project from the same repository.
+2. Set **Root Directory** to `frontend`.
+3. Set the environment variable below before deploying:
+
+```text
+VITE_API_URL=https://<your-api-project>.vercel.app/api
+```
+
+4. Deploy and open the resulting Vercel URL.
+
+After the frontend URL is known, update the backend `CLIENT_URL` variable to that exact URL and redeploy the backend. Never add `DATABASE_URL`, the Supabase password, or `JWT_SECRET` to frontend variables.
+
 ## Development Account
 
 After loading `database/seed.sql`, use this account for the admin workflow:
