@@ -8,9 +8,9 @@ DriveEase is a full-stack vehicle rental, booking and maintenance management sys
 | --- | --- | --- |
 | Frontend | React, Vite, React Router | Responsive customer and admin interface |
 | Backend | Node.js, Express | REST API and business rules |
-| Database | MySQL 8 | Relational data storage and reporting |
+| Database | Supabase PostgreSQL | Hosted relational data storage and reporting |
 | Authentication | JWT, bcryptjs | Secure password hashing and role-based access |
-| Database client | mysql2 | Parameterized MySQL queries and transactions |
+| Database client | pg | Parameterized PostgreSQL queries and transactions |
 
 ## Features
 
@@ -44,10 +44,10 @@ Node.js / Express API
         |
         | parameterized SQL queries and transactions
         v
-MySQL relational database
+Supabase PostgreSQL database
 ```
 
-The frontend never connects to MySQL directly. The Express API performs validation, authentication, availability checks, and database operations.
+The frontend never connects to Supabase directly. The Express API performs validation, authentication, availability checks, and database operations.
 
 ## Database Design
 
@@ -87,7 +87,7 @@ driveease/
 │       └── styles.css        # Responsive visual design
 ├── backend/                  # Express REST API
 │   └── src/
-│       ├── db/pool.js        # MySQL connection pool
+│       ├── db/pool.js        # PostgreSQL connection pool
 │       ├── middleware/       # JWT and admin authorization middleware
 │       ├── routes/           # Auth, vehicle, booking, and admin APIs
 │       └── server.js         # API entry point
@@ -102,12 +102,12 @@ driveease/
 ### Prerequisites
 
 - Node.js 20 or newer
-- MySQL Server 8 or newer
+- A Supabase account and project
 - npm
 
 ### 1. Create the database
 
-Open MySQL Workbench or a MySQL terminal and run these files in order:
+Create a Supabase project, open its SQL Editor, then run these files in order:
 
 1. `database/schema.sql`
 2. `database/seed.sql`
@@ -123,15 +123,11 @@ Copy-Item backend\.env.example backend\.env
 Copy-Item frontend\.env.example frontend\.env
 ```
 
-Update `backend/.env` with your local MySQL details:
+Update `backend/.env` with the Supabase pooled connection string from **Connect**:
 
 ```env
 PORT=5001
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=driveease
-DB_USER=root
-DB_PASSWORD=your_mysql_password
+DATABASE_URL=postgresql://postgres.your_project:your_password@aws-0-region.pooler.supabase.com:6543/postgres
 JWT_SECRET=replace_this_with_a_long_random_secret
 ```
 
@@ -227,4 +223,4 @@ Each team member should understand the end-to-end flow for the DBMS viva and fin
 - Never commit `backend/.env` or `frontend/.env`; they are ignored by Git.
 - Use a strong, unique `JWT_SECRET` outside local development.
 - Do not use the seeded admin password in production.
-- Deploy with a hosted MySQL database; Vercel or another cloud host cannot access `localhost` on your personal computer.
+- Use the Supabase pooled connection string for Vercel deployments; never expose it in frontend environment variables.
