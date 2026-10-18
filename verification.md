@@ -4,7 +4,7 @@ Verified locally on 19 October 2026 (Asia/Kolkata). The repository was cloned in
 
 ## Automated checks
 
-- `npm test`: 16 PostgreSQL/API scenarios, 3 licence validator tests and their parent suite (Node reports 20 passing tests); 10 frontend component tests pass.
+- `npm test`: 18 PostgreSQL/API scenarios, 3 licence validator tests and their parent suite (Node reports 22 passing tests); 10 frontend component tests pass.
 - `npm run build`: production Vite build passes; frontend JS about 95 kB gzip, CSS about 7 kB gzip. Fonts are self-hosted.
 - `npm run format:check`: passes.
 - `npm run test:design`: 8 documented colors match runtime CSS.
@@ -39,13 +39,21 @@ Initial layout screenshots (before the model-photo correction): [Desktop](verifi
 
 ## Deployment
 
-Root deployment config packages the frontend and Express API behind one origin; separate-project configurations remain available. SPA deep-link rewrites, readiness endpoint, TLS configuration and environment examples are included. The user selected reuse of the existing Supabase database. Do not load development seed/test data there.
+Root deployment config packages the frontend and Express API behind one origin; separate-project configurations remain available. SPA deep-link rewrites, readiness endpoint, TLS configuration and environment examples are included. The original database was inaccessible; the user then selected a new database in their own Supabase account. No development seed accounts were loaded.
 
-Vercel authentication is complete and `medhanshs-projects-1ac9d87f/driveease` is created and linked. `vercel build` passes with the Node.js 24 serverless handler; the output includes the shared licence validator and backend routes and contains no environment files. A fresh signing secret and TLS setting are configured for Production and Preview. Live deployment is pending the existing Supabase connection URI. Local verification does not establish production database connectivity. No production data or original deployment was modified. Apply the optional additive index migration to the existing database only as part of the deployment plan.
+Live production: [driveease-phi.vercel.app](https://driveease-phi.vercel.app), project `medhanshs-projects-1ac9d87f/driveease`. The Vercel production build succeeded with Node.js 24; functions use Mumbai (`bom1`) alongside the new Mumbai Supabase project. Supabase Data API is disabled, automatic RLS and SSL enforcement are enabled, and server TLS validates the provider certificate. Production and Preview credentials are Vercel secrets. Private environment/password files are excluded from Git and deployment uploads.
+
+The empty-database initializer creates schema, fleet and server-only access controls atomically, refuses non-empty schemas, and creates no user accounts. Its behavior and subsequent API operations are tested with real local PostgreSQL. Migration 003 enables RLS on all nine tables, restricts views and revokes direct client-role function/table access.
+
+Runtime log review identified the need to trust Vercel's nearest proxy hop for visitor-based auth throttling. The backend now enables a one-hop trust setting only on Vercel; a regression test exercises both forwarded headers without rate-limit configuration errors. Direct/local servers retain Express's default trust setting.
+
+Live checks passed for public health/readiness, catalogue counts and filters, SPA deep links, registration/login/session, invalid DL rejection, customer/admin authorization, server-calculated booking totals, persisted payments/history, cancellation, administrator approval and reports. A temporary synthetic account was used for the live write checks; that account and all its bookings, payments and trip rows were removed. All 12 WebP images returned HTTP 200. Browser review confirmed the deployed fleet and images. Evidence: [live check results](verification-assets/production-smoke.json) and [deployed fleet](verification-assets/production-fleet.png).
+
+The database starts with 12 vehicles and zero users/bookings. Original users and bookings were not available for import. The original public website and database remain untouched. Local development continues using its separate local PostgreSQL database.
 
 ## Remaining release constraints
 
-- Confirm Vercel preview `/api/ready`, then exercise sign-in, booking and admin approval against the intended hosted database before promotion.
+- Create a real customer account on the deployed site. Administrator privileges must be assigned deliberately to the intended account; no known-password demo administrator exists in production.
 - Vehicle photos depict the actual named models; colour, trim and model year can differ from a specific rental unit. The Ather image is credited official manufacturer media; the other 11 photos retain their Creative Commons attribution and license links.
 - Payments remain simulations. Original revenue accounting for successful payment records is preserved, including cancelled reservations.
 - The auth limiter is per instance; use hosting-edge controls for distributed abuse protection.
@@ -57,6 +65,6 @@ The catalogue expanded from 2 cars + 2 bikes to 6 cars + 6 bikes. All 12 models 
 
 `npm run test:fleet` checks canonical-to-generated data, asset presence, WebP headers, file-size bounds, attribution and unique image bytes. API integration reruns the migration and confirms IDs, prices, statuses and image counts remain stable. Browser checks confirm the selected date range is preserved, Bike filtering returns six models, and all six bike photographs load.
 
-The update was applied only to local `driveease_local`. Existing bookings were retained. Hosted Supabase/deployment is still pending the earlier account configuration.
+The update was applied only to local `driveease_local`. Existing bookings were retained. The fleet was subsequently initialized in the new user-owned Supabase database as part of the production deployment described above.
 
 Updated photo evidence: [Fleet preview](verification-assets/fleet-authentic-preview.png) · [Phone preview](verification-assets/fleet-authentic-mobile.png). All 12 images returned valid WebP over HTTP and loaded in the browser; no horizontal document overflow was observed at the narrow breakpoint.

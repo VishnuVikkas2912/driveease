@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "sync:fleet": "node scripts/sync-fleet.js",
-    "test:fleet": "node scripts/sync-fleet.js --check"
+    "test:fleet": "node scripts/sync-fleet.js --check",
+    "db:initialize": "node scripts/initialize-database.js --empty-database"
   },
   "devDependencies": {
     "prettier": "^3.6.2"

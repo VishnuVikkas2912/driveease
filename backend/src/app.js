@@ -15,6 +15,9 @@ if (!process.env.DATABASE_URL || (process.env.JWT_SECRET || '').length < 32) {
 }
 
 const app = express();
+// Vercel overwrites X-Forwarded-For at its edge. Trust only the nearest hop
+// there so auth limits use the visitor address; direct/local servers trust none.
+if (process.env.VERCEL === '1') app.set('trust proxy', 1);
 const allowedOrigins =
   process.env.CLIENT_URL?.split(',')
     .map((value) => value.trim())

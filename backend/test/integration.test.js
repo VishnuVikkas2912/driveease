@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
+import { initializeEmptyDatabase } from '../src/db/initialize.js';
 
 // Only an isolated schema on a local PostgreSQL instance is allowed.
 const databaseUrl = process.env.TEST_DATABASE_URL || 'postgresql://localhost/driveease_local';
@@ -13,6 +14,7 @@ if (!['localhost', '127.0.0.1'].includes(parsed.hostname))
 const schema = `driveease_test_${process.pid}_${Date.now()}`;
 const setup = new pg.Pool({ connectionString: databaseUrl });
 process.env.NODE_ENV = 'test';
+process.env.VERCEL = '1';
 process.env.JWT_SECRET = 'integration-only-secret-with-at-least-32-characters';
 parsed.searchParams.set('options', `-c search_path=${schema}`);
 process.env.DATABASE_URL = parsed.toString();
@@ -37,7 +39,32 @@ const registration = (email, license) => ({
 test('DriveEase PostgreSQL and HTTP integration', async (t) => {
   await setup.query(`CREATE SCHEMA ${schema}`);
   try {
-    await pool.query(await readFile(new URL('../../database/schema.sql', import.meta.url), 'utf8'));
+    await t.test(
+      'production initialization is atomic, restricts client API access and never creates demo accounts',
+      async () => {
+        const conn = await pool.connect();
+        try {
+          await initializeEmptyDatabase(conn);
+          assert.equal((await conn.query('SELECT COUNT(*) FROM users')).rows[0].count, '0');
+          assert.equal((await conn.query('SELECT COUNT(*) FROM vehicles')).rows[0].count, '12');
+          const security = (
+            await conn.query(
+              "SELECT c.relname,c.relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND c.relkind='r'",
+            )
+          ).rows;
+          assert.equal(security.length, 9);
+          assert(security.every((table) => table.relrowsecurity));
+          const publicExec = await conn.query(
+            "SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace CROSS JOIN LATERAL aclexplode(p.proacl) acl WHERE n.nspname=current_schema() AND acl.grantee=0 AND acl.privilege_type='EXECUTE'",
+          );
+          assert.equal(publicExec.rowCount, 0);
+          await assert.rejects(initializeEmptyDatabase(conn), /not empty/);
+          assert.equal((await conn.query('SELECT COUNT(*) FROM vehicles')).rows[0].count, '12');
+        } finally {
+          conn.release();
+        }
+      },
+    );
     await pool.query(await readFile(new URL('../../database/seed.sql', import.meta.url), 'utf8'));
     let customer, other, admin, bookingId;
     const booking = {
@@ -55,6 +82,28 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
         database: 'connected',
       });
     });
+    await t.test(
+      'Vercel proxy headers identify clients without rate-limit configuration errors',
+      async () => {
+        assert.equal(app.get('trust proxy'), 1);
+        assert.equal(app.get('trust proxy fn')('127.0.0.1', 0), true);
+        assert.equal(app.get('trust proxy fn')('127.0.0.1', 1), false);
+        const errors = [];
+        const original = console.error;
+        console.error = (...args) => errors.push(args);
+        try {
+          const result = await client
+            .post('/api/auth/register')
+            .set('X-Forwarded-For', '203.0.113.40')
+            .set('Forwarded', 'for=203.0.113.40;proto=https')
+            .send({});
+          assert.equal(result.status, 400);
+          assert.equal(errors.length, 0);
+        } finally {
+          console.error = original;
+        }
+      },
+    );
     await t.test(
       'same-origin deployment and local proxy allow requests; unknown origins are rejected',
       async () => {

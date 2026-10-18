@@ -71,9 +71,21 @@ Leave `VITE_API_URL` unset for this root deployment. `CLIENT_URL` is only needed
 
 You may retain `backend` and `frontend` as separate Vercel project roots. Set backend `DATABASE_URL`, `DATABASE_SSL=true`, `JWT_SECRET`, and `CLIENT_URL` to the exact frontend origin. Set frontend `VITE_API_URL=https://your-api.vercel.app/api`. The frontend has its own SPA rewrite configuration. Redeploy both after changing settings.
 
+### A new, empty Supabase database
+
+Use a project you own. This app connects through server-side PostgreSQL, so the Supabase Data API can remain disabled. Store the transaction-pooler URI and `DATABASE_SSL=true` in a local ignored environment file, then run:
+
+```sh
+npm run db:initialize -- --env-file .vercel/driveease-database.env
+```
+
+Initialization refuses a non-empty schema. It creates the schema, 12-vehicle catalogue and server-only access controls together in a transaction. It creates no accounts or development administrator. Register your own account after deployment; administrator access must be assigned deliberately. Existing users and bookings require an export from their database owner.
+
+Migration `003_server_only_access.sql` enables row-level security, makes views use caller permissions and revokes direct client-role access to DriveEase tables, views and functions. The Express server connects as the project database owner and enforces its own JWT authorization. Apply this migration only to installations using that server connection model.
+
 ### Current deployment status
 
-Vercel is authenticated and the project `medhanshs-projects-1ac9d87f/driveease` is created and linked locally. The Vercel build passes with Node.js 24, including the Express API and shared licence validator. Production and Preview have a generated signing secret and TLS enabled. Deployment is waiting for the intended hosted Supabase `DATABASE_URL`; the local configuration still points to the laptop's PostgreSQL. No production database has been changed, and the original public website has not been replaced. Local Vercel metadata and environment files are ignored by Git.
+Live at [driveease-phi.vercel.app](https://driveease-phi.vercel.app), deployed to `medhanshs-projects-1ac9d87f/driveease`. The Express API and new user-owned Supabase database run in Mumbai. Database TLS is enforced and its certificate is verified; connection credentials and the signing secret are stored as Vercel secrets. The database starts with 6 cars and 6 bikes, without development accounts or imported users/bookings. The original database was inaccessible and was not modified. Local development keeps its own PostgreSQL configuration; production connection settings stay in ignored local Vercel files.
 
 ## Data model and behavior
 
