@@ -18,12 +18,14 @@ export async function api(path, { method = 'GET', body, token, signal } = {}) {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       if (r.status === 401 && token) window.dispatchEvent(new Event('session-expired'));
-      throw new Error(
+      const error = new Error(
         data.message ||
           (r.status >= 500
             ? 'DriveEase is temporarily unavailable. Try again.'
             : 'Could not complete this request. Try again.'),
       );
+      error.fields = data.errors;
+      throw error;
     }
     return data;
   } catch (error) {

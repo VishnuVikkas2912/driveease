@@ -56,9 +56,11 @@ export function Button({ children, busy, className = '', ...props }) {
     </button>
   );
 }
-export function Field({ label, name, error, type = 'text', children, ...props }) {
+export function Field({ label, name, error, hint, type = 'text', children, ...props }) {
   const [show, setShow] = useState(false);
   const id = React.useId();
+  const description =
+    [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined;
   return (
     <div className="field">
       <label htmlFor={id}>
@@ -72,7 +74,7 @@ export function Field({ label, name, error, type = 'text', children, ...props })
             name={name}
             {...props}
             aria-invalid={!!error}
-            aria-describedby={error ? `${id}-error` : undefined}
+            aria-describedby={description}
           >
             {children}
           </select>
@@ -83,7 +85,7 @@ export function Field({ label, name, error, type = 'text', children, ...props })
             {...props}
             type={type === 'password' && show ? 'text' : type}
             aria-invalid={!!error}
-            aria-describedby={error ? `${id}-error` : undefined}
+            aria-describedby={description}
           />
         )}{' '}
         {type === 'password' && (
@@ -98,6 +100,11 @@ export function Field({ label, name, error, type = 'text', children, ...props })
           </button>
         )}
       </div>
+      {hint && (
+        <span id={`${id}-hint`} className="field-help">
+          {hint}
+        </span>
+      )}
       {error && (
         <span id={`${id}-error`} className="field-error">
           {error}

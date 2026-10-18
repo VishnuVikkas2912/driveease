@@ -21,7 +21,10 @@ const { default: app } = await import('../src/app.js');
 const { pool } = await import('../src/db/pool.js');
 const client = request(app);
 const auth = (token) => ({ Authorization: `Bearer ${token}` });
-const day = (n) => new Date(Date.now() + 86400000 * n).toISOString().slice(0, 10);
+const day = (n) => {
+  const indiaToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  return new Date(Date.parse(indiaToday) + 86400000 * n).toISOString().slice(0, 10);
+};
 const registration = (email, license) => ({
   name: 'Integration Traveller',
   email,
@@ -126,7 +129,7 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
     await t.test('registration is atomic, normalized and passwords are hashed', async () => {
       const r = await client
         .post('/api/auth/register')
-        .send(registration('TRAVELLER@example.com', 'TEST-LICENSE-A'));
+        .send(registration('TRAVELLER@example.com', 'ka0120200000001'));
       assert.equal(r.status, 201);
       customer = r.body.token;
       const {
@@ -134,9 +137,17 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
       } = await pool.query("SELECT * FROM users WHERE email='traveller@example.com'");
       assert.notEqual(u.password_hash, 'Travel@123');
       assert(await bcrypt.compare('Travel@123', u.password_hash));
+      assert.equal(
+        (
+          await pool.query('SELECT license_number FROM driving_licenses WHERE user_id=$1', [
+            u.user_id,
+          ])
+        ).rows[0].license_number,
+        'KA0120200000001',
+      );
       const duplicate = await client
         .post('/api/auth/register')
-        .send(registration('other@example.com', 'TEST-LICENSE-A'));
+        .send(registration('other@example.com', 'KA0120200000001'));
       assert.equal(duplicate.status, 409);
       assert.equal(
         (await pool.query("SELECT * FROM users WHERE email='other@example.com'")).rows.length,
@@ -145,7 +156,7 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
       other = (
         await client
           .post('/api/auth/register')
-          .send(registration('other@example.com', 'TEST-LICENSE-B'))
+          .send(registration('other@example.com', 'KA0120200000002'))
       ).body.token;
       admin = (
         await client
@@ -165,9 +176,10 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
       );
       assert.equal(
         (
-          await client
-            .post('/api/auth/register')
-            .send({ ...registration('invalid@example.com', 'TEST-C'), expiryDate: '2020-02-30' })
+          await client.post('/api/auth/register').send({
+            ...registration('invalid@example.com', 'KA0120200000003'),
+            expiryDate: '2020-02-30',
+          })
         ).status,
         400,
       );
@@ -175,7 +187,7 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
         (
           await client
             .post('/api/auth/register')
-            .send({ ...registration('invalid@example.com', 'TEST-C'), password: 'x' })
+            .send({ ...registration('invalid@example.com', 'KA0120200000003'), password: 'x' })
         ).status,
         400,
       );
@@ -184,6 +196,41 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
         'traveller@example.com',
       );
     });
+    await t.test(
+      'direct API requests cannot bypass licence structure and date checks or create partial accounts',
+      async () => {
+        const before = (await pool.query('SELECT COUNT(*) FROM users')).rows[0].count;
+        const invalid = [
+          { licenseNumber: 'KA-0120200000003' },
+          { licenseNumber: 'KA01 20200000003' },
+          { licenseNumber: ' KA0120200000003' },
+          { licenseNumber: 'KA0120200000003\n' },
+          { licenseNumber: 'KA012020000000' },
+          { licenseNumber: 'ZZ0120200000003' },
+          { licenseNumber: 'KA01ABCD0000003' },
+          { licenseNumber: 'KA0118990000003' },
+          { licenseNumber: `KA01${Number(day(0).slice(0, 4)) + 1}0000003` },
+          { licenseNumber: 'KA0120210000003' },
+          { licenseNumber: { value: 'KA0120200000003' } },
+          { issueDate: '2020-02-30' },
+          { issueDate: day(1) },
+          { expiryDate: '2020-01-01' },
+          { expiryDate: day(-1) },
+        ];
+        for (const values of invalid) {
+          const result = await client
+            .post('/api/auth/register')
+            .send({ ...registration('invalid@example.com', 'KA0120200000003'), ...values });
+          assert.equal(result.status, 400, JSON.stringify(values));
+          assert(Object.keys(result.body.errors).length > 0);
+        }
+        assert.equal((await pool.query('SELECT COUNT(*) FROM users')).rows[0].count, before);
+        assert.equal(
+          (await pool.query('SELECT COUNT(*) FROM driving_licenses')).rows[0].count,
+          '2',
+        );
+      },
+    );
     await t.test(
       'catalog filtering, pagination, date validation and parameterized injection defense',
       async () => {

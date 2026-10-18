@@ -32,6 +32,8 @@ import {
 import '@fontsource/barlow-condensed/latin-500.css';
 import '@fontsource/barlow-condensed/latin-600.css';
 import { api } from './services/api';
+import { licenceErrors } from '../../shared/driving-license.js';
+import { LicenceNumberField } from './components/LicenceNumberField';
 import {
   Breadcrumb,
   Button,
@@ -772,6 +774,7 @@ function AuthPage({ register = false }) {
       : '/vehicles';
   async function submit(e) {
     e.preventDefault();
+    const form = e.currentTarget;
     const v = f.values;
     const errors = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) errors.email = 'Enter a valid email address.';
@@ -779,10 +782,7 @@ function AuthPage({ register = false }) {
       errors.password = register ? 'Use at least 6 characters.' : 'Enter your password.';
     if (register) {
       if (!v.name.trim()) errors.name = 'Enter your full name.';
-      if (!v.licenseNumber.trim()) errors.licenseNumber = 'Enter your driving licence number.';
-      if (!v.issueDate || v.issueDate > today()) errors.issueDate = 'Enter a past issue date.';
-      if (!v.expiryDate || v.expiryDate <= v.issueDate || v.expiryDate < today())
-        errors.expiryDate = 'Enter a valid future expiry date.';
+      Object.assign(errors, licenceErrors(v, today()));
     }
     if (!f.validate(errors, e.currentTarget)) return;
     f.setBusy(true);
@@ -795,6 +795,7 @@ function AuthPage({ register = false }) {
       setSaved(true);
       navigate(destination);
     } catch (e) {
+      if (e.fields) f.validate(e.fields, form);
       f.setError(e.message);
     } finally {
       f.setBusy(false);
@@ -865,12 +866,13 @@ function AuthPage({ register = false }) {
               <div className="form-divider">
                 <ShieldCheck size={17} /> Driving licence details
               </div>
-              <Field label="Licence number" required maxLength={60} {...f.bind('licenseNumber')} />
+              <LicenceNumberField form={f} />
               <div className="field-row">
                 <Field
                   label="Issue date"
                   type="date"
                   required
+                  min="1900-01-01"
                   max={today()}
                   {...f.bind('issueDate')}
                 />
@@ -882,6 +884,10 @@ function AuthPage({ register = false }) {
                   {...f.bind('expiryDate')}
                 />
               </div>
+              <p className="field-hint">
+                We check the number’s format and dates. Government verification is not connected
+                yet.
+              </p>
             </>
           )}
           <ErrorMessage message={f.error} />

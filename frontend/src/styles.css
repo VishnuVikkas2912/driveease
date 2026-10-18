@@ -902,6 +902,11 @@ select[aria-invalid='true'] {
   color: var(--muted);
   margin-top: -10px;
 }
+.field-help {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

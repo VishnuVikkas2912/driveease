@@ -2,7 +2,8 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db/pool.js';
-import { asyncHandler, fail, isoDate, today } from '../utils/http.js';
+import { asyncHandler, fail, today } from '../utils/http.js';
+import { licenceErrors } from '../../../shared/driving-license.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -13,7 +14,11 @@ const tokenFor = (user) =>
 router.post(
   '/register',
   asyncHandler(async (req, res) => {
-    const { name, password, phone, licenseNumber, issueDate, expiryDate } = req.body;
+    const { name, password, phone, issueDate, expiryDate } = req.body;
+    const errors = licenceErrors(req.body, today());
+    if (Object.keys(errors).length)
+      return res.status(400).json({ message: 'Check your driving licence details.', errors });
+    const licenseNumber = req.body.licenseNumber.toUpperCase();
     const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     if (
       typeof name !== 'string' ||
@@ -24,22 +29,9 @@ router.post(
       typeof password !== 'string' ||
       password.length < 6 ||
       Buffer.byteLength(password) > 72 ||
-      typeof licenseNumber !== 'string' ||
-      !licenseNumber.trim() ||
-      licenseNumber.length > 60 ||
       (phone && (typeof phone !== 'string' || phone.length > 20))
     )
       return fail(res, 400, 'Enter a name, valid email, licence and a password of 6 to 72 bytes.');
-    if (
-      !isoDate(issueDate) ||
-      !isoDate(expiryDate) ||
-      issueDate > today() ||
-      expiryDate <= issueDate ||
-      expiryDate < today()
-    )
-      return fail(res, 400, 'Enter a past licence issue date and a valid future expiry date.');
-    if (!name || !email || !password || !licenseNumber || !issueDate || !expiryDate)
-      return fail(res, 400, 'Complete all required registration fields.');
     const hash = await bcrypt.hash(password, 12);
     const conn = await pool.connect();
     try {
