@@ -13,7 +13,9 @@
     "test": "npm --prefix backend test && npm --prefix frontend test",
     "test:design": "node scripts/check-design.js",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "sync:fleet": "node scripts/sync-fleet.js",
+    "test:fleet": "node scripts/sync-fleet.js --check"
   },
   "devDependencies": {
     "prettier": "^3.6.2"

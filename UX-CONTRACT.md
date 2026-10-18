@@ -54,3 +54,7 @@ All public routes set document title. Protected routes redirect to login with sa
 ## Verification
 
 npm test: real isolated PostgreSQL schema + API integration; npm run build; npm run format:check; npm run test:design; strict premium audit. Browser: desktop and narrow screenshots, account validation, booking and cancellation, admin approval/maintenance, loading, failure/retry, no-results, keyboard and reduced-motion. Catalog/detail and bookings/admin are sibling comparisons. Evidence: backend/test/integration.test.js and verification.md.
+
+## Vehicle photography
+
+`database/fleet.json` owns curated model-to-photo mappings. Shared `VehiclePhoto` owns card/detail display and accessible failure fallback; `PhotoCredit` and `/photo-credits` expose source and license links. `/api/vehicles/summary` reports non-retired fleet totals independently of rental-date availability. Catalogue updates are additive and preserve existing IDs, prices, states and bookings. Verify with `npm run test:fleet`, integration tests and browser card/detail checks.

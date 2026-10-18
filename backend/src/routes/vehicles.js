@@ -49,6 +49,17 @@ router.get(
   }),
 );
 router.get(
+  '/summary',
+  asyncHandler(async (req, res) => {
+    const {
+      rows: [counts],
+    } = await pool.query(
+      `SELECT COUNT(*)::int total, COUNT(*) FILTER (WHERE vehicle_type='CAR')::int cars, COUNT(*) FILTER (WHERE vehicle_type='BIKE')::int bikes FROM vehicles WHERE status <> 'RETIRED'`,
+    );
+    res.json(counts);
+  }),
+);
+router.get(
   '/:id',
   asyncHandler(async (req, res) => {
     if (!positiveId(req.params.id)) return fail(res, 400, 'Invalid vehicle identifier.');

@@ -34,6 +34,7 @@ npm test
 npm run build
 npm run format:check
 npm run test:design
+npm run test:fleet
 npm --prefix backend audit
 npm --prefix frontend audit
 ```
@@ -82,7 +83,7 @@ A booking transaction locks its vehicle, checks active bookings and maintenance,
 
 Existing maintenance behavior is preserved: any scheduled/in-progress service takes the vehicle out of the available fleet. Completing the final active service restores availability. Scheduling does not cancel existing reservations; review them first. The UI provides a confirmation before scheduling or completing service.
 
-Payments are simulated, with no real card or UPI collection and no real charges/refunds. Reports aggregate successful simulation records, including those associated with subsequently cancelled bookings, matching the existing project behavior. Seed vehicle photographs are illustrative and are labelled accordingly. Replace them with actual fleet photographs before a customer-facing release.
+Payments are simulated, with no real card or UPI collection and no real charges/refunds. Reports aggregate successful simulation records, including those associated with subsequently cancelled bookings, matching the existing project behavior. The catalogue contains 6 cars and 6 bikes with distinct, credited photographs of the real models. These are model reference photos, with colours/trim allowed to vary from the specific rental unit. See the in-app Vehicle photo credits page for source and license links. Most images are Creative Commons photographs; the Ather 450X image is an official Ather Energy product image, credited as manufacturer media rather than Creative Commons.
 
 ## API
 
@@ -100,4 +101,16 @@ Lists accept `limit` (1–101) and nonnegative `offset`. Vehicles accept type, b
 
 ## Asset credits
 
-Road photograph: [Unsplash](https://images.unsplash.com/photo-1469854523086-cc02fe5d8800) (asset ID `photo-1469854523086-cc02fe5d8800`, downloaded to `frontend/public/images/open-road.jpg`). Existing seed vehicle images remain hosted on Unsplash. Manrope and Barlow Condensed are self-hosted through Fontsource under OFL; icons use lucide-react under ISC.
+Road photograph: [Unsplash](https://images.unsplash.com/photo-1469854523086-cc02fe5d8800) (asset ID `photo-1469854523086-cc02fe5d8800`, downloaded to `frontend/public/images/open-road.jpg`). Vehicle images are self-hosted WebP files, with source/author/license metadata in `database/fleet.json` and the in-app Vehicle photo credits page. Manrope and Barlow Condensed are self-hosted through Fontsource under OFL; icons use lucide-react under ISC.
+
+## Updating the local fleet
+
+`database/fleet.json` is the canonical demo catalogue and photo attribution manifest. After editing it, run `npm run sync:fleet` to generate seed data, the additive migration and frontend credits. `npm run test:fleet` verifies generated files and distinct local WebP assets.
+
+For an existing local installation, apply the update with:
+
+```sh
+psql driveease_local -v ON_ERROR_STOP=1 -f database/migrations/002_fleet_and_photos.sql
+```
+
+This migration can be rerun: it inserts missing demo vehicles and changes their primary photo; it preserves existing IDs, pricing, availability, bookings and additional gallery photos. Do not rerun schema.sql or the development admin seed on an existing hosted database.

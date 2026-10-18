@@ -55,6 +55,8 @@ import {
   Status,
 } from './components/ui';
 import './styles.css';
+import { VehiclePhoto, PhotoCredit } from './components/VehiclePhoto';
+import vehiclePhotos from './data/vehicle-photos.json';
 const Auth = React.createContext();
 function readSession() {
   try {
@@ -191,9 +193,9 @@ function Layout() {
             A vehicle rental & management project <span className="footer-dot">•</span> Simulated
             payments only
           </span>
-          <span>
-            Made for the open road <RouteIcon size={15} />
-          </span>
+          <Link to="/photo-credits">
+            Vehicle photo credits <ArrowUpRight size={14} />
+          </Link>
         </div>
       </footer>
     </>
@@ -208,7 +210,6 @@ function PageTitle({ title }) {
   }, [title]);
   return null;
 }
-const vehicleArt = (v) => v.image_url || '/images/open-road.jpg';
 function VehicleCard({ vehicle: v, query = '' }) {
   return (
     <article className="vehicle-card">
@@ -218,12 +219,12 @@ function VehicleCard({ vehicle: v, query = '' }) {
         tabIndex={-1}
         aria-hidden="true"
       >
-        <img src={vehicleArt(v)} alt="" loading="lazy" />
+        <VehiclePhoto vehicle={v} />
         <span className="vehicle-type">
           {v.vehicle_type === 'BIKE' ? <Bike size={15} /> : <CarFront size={15} />}{' '}
           {titleCase(v.vehicle_type)}
         </span>
-        <span className="image-note">Illustrative image</span>
+        <span className="image-note">Model photo</span>
       </Link>
       <div className="vehicle-body">
         <div className="vehicle-heading">
@@ -468,6 +469,7 @@ function ArrowDownIcon() {
 }
 function Vehicles() {
   const [params, setParams] = useSearchParams();
+  const inventory = useData('/vehicles/summary');
   const [limit, setLimit] = useState(12);
   const query = params.toString();
   const result = useData('/vehicles?' + query + `&limit=${limit + 1}`);
@@ -488,6 +490,19 @@ function Vehicles() {
           with the right ride.
         </h1>
         <p>Find a car or bike for whatever you have in mind.</p>
+        {inventory.data && (
+          <div className="fleet-inventory" aria-label="Total fleet">
+            <span>
+              <CarFront size={18} />
+              <strong>{inventory.data.cars}</strong> cars
+            </span>
+            <span>
+              <Bike size={18} />
+              <strong>{inventory.data.bikes}</strong> bikes
+            </span>
+            <span>{inventory.data.total} in the fleet</span>
+          </div>
+        )}
       </div>
       <SearchForm key={query} initial={Object.fromEntries(params)} compact onSearch={search} />
       <div className="results-heading">
@@ -614,9 +629,10 @@ function VehicleDetail() {
       <div className="detail-grid">
         <section className="ride-overview">
           <div className="detail-image">
-            <img src={vehicleArt(v)} alt={`Illustrative ${titleCase(v.vehicle_type)} photograph`} />
-            <span className="image-note">Illustrative image · actual vehicle may differ</span>
+            <VehiclePhoto vehicle={v} loading="eager" />
+            <span className="image-note">Model reference · colour and trim may vary</span>
           </div>
+          <PhotoCredit src={v.image_url} />
           <div className="detail-title">
             <div>
               <p className="eyebrow">
@@ -1403,6 +1419,37 @@ function Admin() {
     </div>
   );
 }
+function PhotoCredits() {
+  return (
+    <div className="container page">
+      <PageTitle title="Vehicle photo credits" />
+      <div className="page-heading">
+        <p className="eyebrow">THE REAL MODELS</p>
+        <h1>Meet the photographers.</h1>
+        <p>
+          Model reference photographs. Colours, model year, trim and accessories may differ from the
+          rental vehicle.
+        </p>
+      </div>
+      <div className="photo-credits-grid">
+        {Object.entries(vehiclePhotos).map(([src, photo]) => (
+          <article className="panel" key={src}>
+            <img
+              src={src}
+              alt={photo.model}
+              width={photo.width}
+              height={photo.height}
+              loading="lazy"
+            />
+            <h2>{photo.model}</h2>
+            <PhotoCredit src={src} />
+            <p className="muted">{photo.changes}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
 function NotFound() {
   return (
     <div className="container page">
@@ -1448,6 +1495,7 @@ const router = createBrowserRouter([
           </Protected>
         ),
       },
+      { path: '/photo-credits', element: <PhotoCredits /> },
       { path: '*', element: <NotFound /> },
     ],
   },

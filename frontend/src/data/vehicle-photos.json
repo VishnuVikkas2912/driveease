@@ -1,0 +1,134 @@
+{
+  "/images/vehicles/nexon.webp": {
+    "model": "Tata Nexon",
+    "width": 1000,
+    "height": 1000,
+    "author": "Harshvyas1001",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tata_Nexon_2023_Rear_View_2.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:Tata Nexon 2023 Rear View 2.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/i20.webp": {
+    "model": "Hyundai i20",
+    "width": 1280,
+    "height": 778,
+    "author": "The Drivers Hub",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2020_Hyundai_i20_1.5_Asta_(O)_Diesel_(India)_front_view.png",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "originalFile": "File:2020 Hyundai i20 1.5 Asta (O) Diesel (India) front view.png",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/classic-350.webp": {
+    "model": "Royal Enfield Classic 350",
+    "width": 1280,
+    "height": 820,
+    "author": "Billyinthedarbies",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2022Classic350.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:2022Classic350.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/ather-450x.webp": {
+    "model": "Ather 450X",
+    "width": 2200,
+    "height": 1208,
+    "author": "Ather Energy",
+    "sourceUrl": "https://www.atherenergy.com/450",
+    "license": "Manufacturer product image",
+    "licenseUrl": "https://www.atherenergy.com/450",
+    "originalFile": "450x-mono-cosmic-black-d.webp",
+    "changes": "Original manufacturer WebP; no retouching."
+  },
+  "/images/vehicles/swift.webp": {
+    "model": "Maruti Suzuki Swift",
+    "width": 1280,
+    "height": 846,
+    "author": "Ethan Llamas",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Suzuki_Swift_1.2_GL_2021_(1).jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:Suzuki Swift 1.2 GL 2021 (1).jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/creta.webp": {
+    "model": "Hyundai Creta",
+    "width": 1280,
+    "height": 720,
+    "author": "Dairokkan9",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2021_Hyundai_Creta_SX(O)_CRDi_(India)_front_view.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:2021 Hyundai Creta SX(O) CRDi (India) front view.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/thar.webp": {
+    "model": "Mahindra Thar",
+    "width": 889,
+    "height": 1000,
+    "author": "Ank Kumar ",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mahindra_Thar_SUV_in_%22Red_Rage%22_color_at_Ashiana_Brahmanda,_East_Singbhum_India_(Ank_Kumar,_Infosys_limited)_02.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:Mahindra Thar SUV in \"Red Rage\" color at Ashiana Brahmanda, East Singbhum India (Ank Kumar, Infosys limited) 02.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/city.webp": {
+    "model": "Honda City",
+    "width": 1280,
+    "height": 720,
+    "author": "Dairokkan9",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2022_Honda_City_ZX_i-VTEC_(India)_front_view.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:2022 Honda City ZX i-VTEC (India) front view.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/himalayan.webp": {
+    "model": "Royal Enfield Himalayan",
+    "width": 1280,
+    "height": 879,
+    "author": "Ashley Pomeroy",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Royal_Enfield_Himalayan_DB2K5442.jpg",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "originalFile": "File:Royal Enfield Himalayan DB2K5442.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/duke-390.webp": {
+    "model": "KTM 390 Duke",
+    "width": 1280,
+    "height": 960,
+    "author": "PackMecEng",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2018_KTM_390_Duke.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:2018 KTM 390 Duke.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/pulsar-ns200.webp": {
+    "model": "Bajaj Pulsar NS200",
+    "width": 1280,
+    "height": 960,
+    "author": "EEIM",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bj_Pulsar_NS_200.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:Bj Pulsar NS 200.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  },
+  "/images/vehicles/mt-15.webp": {
+    "model": "Yamaha MT-15",
+    "width": 1280,
+    "height": 960,
+    "author": "Ganesh Mohan T",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yamaha_MT_15_Green_version.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "originalFile": "File:Yamaha MT 15 Green version.jpg",
+    "changes": "Resized and converted to WebP; no retouching."
+  }
+}

@@ -74,6 +74,55 @@ test('DriveEase PostgreSQL and HTTP integration', async (t) => {
         );
       },
     );
+    await t.test(
+      'expanded fleet and photo migration are idempotent and preserve existing records',
+      async () => {
+        const summary = await client.get('/api/vehicles/summary');
+        assert.equal(summary.status, 200);
+        assert.deepEqual(summary.body, { total: 12, cars: 6, bikes: 6 });
+        const before = (
+          await pool.query(
+            'SELECT vehicle_id,price_per_day,status FROM vehicles ORDER BY vehicle_id',
+          )
+        ).rows;
+        await pool.query(
+          "UPDATE vehicles SET price_per_day=1234,status='MAINTENANCE' WHERE vehicle_number='KA01DE6104'",
+        );
+        const custom = (
+          await pool.query("SELECT * FROM vehicles WHERE vehicle_number='KA01DE6104'")
+        ).rows[0];
+        await pool.query(
+          await readFile(
+            new URL('../../database/migrations/002_fleet_and_photos.sql', import.meta.url),
+            'utf8',
+          ),
+        );
+        const after = (await pool.query("SELECT * FROM vehicles WHERE vehicle_number='KA01DE6104'"))
+          .rows[0];
+        assert.equal(after.vehicle_id, custom.vehicle_id);
+        assert.equal(after.price_per_day, '1234.00');
+        assert.equal(after.status, 'MAINTENANCE');
+        await pool.query('UPDATE vehicles SET price_per_day=$1,status=$2 WHERE vehicle_id=$3', [
+          before.at(-1).price_per_day,
+          before.at(-1).status,
+          custom.vehicle_id,
+        ]);
+        assert.deepEqual(
+          (
+            await pool.query(
+              'SELECT vehicle_id,price_per_day,status FROM vehicles ORDER BY vehicle_id',
+            )
+          ).rows,
+          before,
+        );
+        const photos = (await pool.query('SELECT image_url FROM vehicle_images')).rows;
+        assert.equal(photos.length, 12);
+        assert.equal(new Set(photos.map((p) => p.image_url)).size, 12);
+        assert(photos.every((p) => /^\/images\/vehicles\/.+\.webp$/.test(p.image_url)));
+        assert.equal((await client.get('/api/vehicles?type=CAR&limit=13')).body.length, 6);
+        assert.equal((await client.get('/api/vehicles?type=BIKE&limit=13')).body.length, 6);
+      },
+    );
     await t.test('registration is atomic, normalized and passwords are hashed', async () => {
       const r = await client
         .post('/api/auth/register')

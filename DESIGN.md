@@ -67,6 +67,8 @@ Use tonal surfaces and fine borders. Small shadow only for the booking search ba
 
 Buttons: brand solid, neutral outline/ghost and danger outline/final solid; hover darkens, focus uses a visible outline, active translates 1px, disabled loses opacity and pointer. Pending state exposes aria-busy with a fixed-width label. Shared Field owns labels and inline errors; native selects and date inputs deliberately accept OS popup geometry and calendar locale. Search uses explicit submit and clear. Modal uses native dialog.showModal for focus isolation, Escape and focus restoration. Status uses shared live-region feedback, with persistent inline errors for failures. Tables use native semantics, pagination, and responsive overflow.
 
+Seeded vehicle photography must depict the named model. `database/fleet.json` owns model-photo pairing and attribution; `npm run sync:fleet` generates SQL and frontend credits. VehiclePhoto is the shared card/detail owner. Use local WebP assets and show the whole image with contain, never substitute an unrelated road or vehicle after an image error. Model reference photos do not claim to show the exact rental unit.
+
 Motion is restrained to 160ms color/transform feedback, disabled under prefers-reduced-motion. Product voice uses concrete actions. Payment is explicitly simulated; do not imply real money processing, insurance, delivery, or unsupported service guarantees.
 
 ## Do's and Don'ts

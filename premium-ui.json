@@ -4,13 +4,17 @@
   "locale": "en-IN",
   "canonicalMap": "UX-CONTRACT.md",
   "requiredCapabilities": ["Select/Listbox", "Date", "Form", "Scrollbar", "Toast", "CRUD"],
-  "ownership": { "Select/Listbox": "native", "Date": "native" },
-  "requiredCommands": ["integration", "build", "format", "tokens"],
+  "ownership": {
+    "Select/Listbox": "native",
+    "Date": "native"
+  },
+  "requiredCommands": ["integration", "build", "format", "tokens", "fleet"],
   "commands": {
     "integration": "npm test",
     "build": "npm run build",
     "format": "npm run format:check",
-    "tokens": "npm run test:design"
+    "tokens": "npm run test:design",
+    "fleet": "npm run test:fleet"
   },
   "evidence": {
     "crudFullFlow": "backend/test/integration.test.js",

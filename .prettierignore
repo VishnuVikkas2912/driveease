@@ -5,3 +5,5 @@ node_modules
 premium-audit.json
 work
 verification-assets
+
+frontend/src/data/vehicle-photos.json
