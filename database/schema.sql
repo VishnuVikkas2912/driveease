@@ -28,3 +28,11 @@ END; $$;
 CREATE TRIGGER maintenance_status_after_change AFTER INSERT OR UPDATE OR DELETE ON maintenance FOR EACH ROW EXECUTE FUNCTION sync_vehicle_maintenance_status();
 
 CREATE OR REPLACE FUNCTION customer_booking_history(input_user_id BIGINT) RETURNS SETOF booking_details LANGUAGE sql AS $$ SELECT * FROM booking_details WHERE user_id=input_user_id ORDER BY pickup_date DESC; $$;
+
+-- Read-path indexes (also available as an additive migration for existing installs).
+-- Additive read-performance migration for existing DriveEase installations.
+-- No rows, columns, constraints, or business states are changed.
+CREATE INDEX IF NOT EXISTS idx_vehicle_image_lookup ON vehicle_images(vehicle_id, image_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_review_lookup ON reviews(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_customer_booking_page ON bookings(user_id, booking_id DESC);
+CREATE INDEX IF NOT EXISTS idx_user_email_lookup ON users(LOWER(email));

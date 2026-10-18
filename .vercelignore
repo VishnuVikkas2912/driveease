@@ -1,0 +1,10 @@
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/test
+**/tests
+work
+verification-assets
+premium-audit.json
+.git

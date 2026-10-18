@@ -1,0 +1,7 @@
+node_modules
+**/node_modules
+**/dist
+**/package-lock.json
+premium-audit.json
+work
+verification-assets
