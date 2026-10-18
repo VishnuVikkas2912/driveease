@@ -4,7 +4,7 @@ Verified locally on 19 October 2026 (Asia/Kolkata). The repository was cloned in
 
 ## Automated checks
 
-- `npm test`: 15 PostgreSQL/API scenarios plus their parent suite (Node reports 16 passing tests); 8 frontend component tests pass.
+- `npm test`: 16 PostgreSQL/API scenarios, 3 licence validator tests and their parent suite (Node reports 20 passing tests); 10 frontend component tests pass.
 - `npm run build`: production Vite build passes; frontend JS about 95 kB gzip, CSS about 7 kB gzip. Fonts are self-hosted.
 - `npm run format:check`: passes.
 - `npm run test:design`: 8 documented colors match runtime CSS.
@@ -41,7 +41,7 @@ Initial layout screenshots (before the model-photo correction): [Desktop](verifi
 
 Root deployment config packages the frontend and Express API behind one origin; separate-project configurations remain available. SPA deep-link rewrites, readiness endpoint, TLS configuration and environment examples are included. The user selected reuse of the existing Supabase database. Do not load development seed/test data there.
 
-Live deployment is pending Vercel authentication and the existing Supabase connection settings. Local verification does not establish production database connectivity. No production data or original deployment was modified. Apply the optional additive index migration to the existing database only as part of the deployment plan.
+Vercel authentication is complete and `medhanshs-projects-1ac9d87f/driveease` is created and linked. `vercel build` passes with the Node.js 24 serverless handler; the output includes the shared licence validator and backend routes and contains no environment files. A fresh signing secret and TLS setting are configured for Production and Preview. Live deployment is pending the existing Supabase connection URI. Local verification does not establish production database connectivity. No production data or original deployment was modified. Apply the optional additive index migration to the existing database only as part of the deployment plan.
 
 ## Remaining release constraints
 

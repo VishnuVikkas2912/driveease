@@ -73,7 +73,7 @@ You may retain `backend` and `frontend` as separate Vercel project roots. Set ba
 
 ### Current deployment status
 
-The local redesign is ready for review. A live deployment requires Vercel account authentication and the intended hosted database settings. No production database has been changed, and the original public website has not been replaced.
+Vercel is authenticated and the project `medhanshs-projects-1ac9d87f/driveease` is created and linked locally. The Vercel build passes with Node.js 24, including the Express API and shared licence validator. Production and Preview have a generated signing secret and TLS enabled. Deployment is waiting for the intended hosted Supabase `DATABASE_URL`; the local configuration still points to the laptop's PostgreSQL. No production database has been changed, and the original public website has not been replaced. Local Vercel metadata and environment files are ignored by Git.
 
 ## Data model and behavior
 
