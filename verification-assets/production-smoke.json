@@ -79,5 +79,14 @@
     }
   ],
   "photos": 12,
-  "temporaryDataRemoved": true
+  "temporaryDataRemoved": true,
+  "finalDeployment": "dpl_GHcYes5Tw5E8CGX9G4sYtfg9NW9N",
+  "finalCheckedAt": "2026-10-18T23:15:50.986Z",
+  "database": "connected",
+  "fleet": {
+    "cars": 6,
+    "bikes": 6
+  },
+  "forwardedHeaderAuthCheck": 400,
+  "runtimeWarningsOrErrors": 0
 }
