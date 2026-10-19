@@ -29,6 +29,18 @@ export async function initializeEmptyDatabase(conn) {
         'utf8',
       ),
     );
+    await conn.query(
+      await readFile(
+        new URL('../../../database/migrations/004_vehicle_locations.sql', import.meta.url),
+        'utf8',
+      ),
+    );
+    await conn.query(
+      await readFile(
+        new URL('../../../database/migrations/005_demo_city_fleet.sql', import.meta.url),
+        'utf8',
+      ),
+    );
     await conn.query('COMMIT');
   } catch (error) {
     await conn.query('ROLLBACK');

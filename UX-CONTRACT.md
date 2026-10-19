@@ -27,7 +27,9 @@ English rental app for customers and administrators, INR/en-IN, Gregorian date-o
 
 ## Dataset navigation
 
-Catalog: explicit Load more, 12 items per request; type/dates in URL. Bookings and maintenance: server pagination, 10 per page; page in URL. Dashboard utilization: server bounded to six rows. No table selection. Search uses explicit submission (no keystroke requests), clear resets dates/type and returns focus. No keyword search.
+Catalog: explicit Load more, 12 items per request; hub/type/dates in URL. Bookings, fleet and maintenance: server pagination, 10 per page; fleet hub/page in URL. Dashboard utilization: server bounded to six rows. No table selection. Search uses explicit submission (no keystroke requests), clear resets hub/dates/type and returns focus. No keyword search.
+
+LocationField extends shared Field using the canonical native select. VehicleEditor owns shared create/edit validation from `shared/vehicle-input.js`; API field errors focus the first invalid control and preserve values. Vehicle edits submit the read revision; stale edits require refreshing before retry. Fleet refresh, overview navigation and successful writes revalidate data. AdminNavigation provides overview/fleet/reservation entry points. A locked hub is disabled with a text explanation; edits to other vehicle fields remain available. The move confirmation names the physical registration and location consequence. Core domain rules live in migrations 004/005 and backend booking/vehicle/admin routes. Only an explicitly authorized operator can provision administrator roles; there is no public role selector.
 
 ## Flow ledger
 

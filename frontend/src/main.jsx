@@ -59,6 +59,8 @@ import {
 import './styles.css';
 import { VehiclePhoto, PhotoCredit } from './components/VehiclePhoto';
 import vehiclePhotos from './data/vehicle-photos.json';
+import { LocationField } from './components/LocationField';
+import { AdminFleet, AdminNavigation } from './components/AdminFleet';
 const Auth = React.createContext();
 function readSession() {
   try {
@@ -155,7 +157,7 @@ function Layout() {
                 {user.role === 'ADMIN' ? 'Reservations' : 'My bookings'}
               </NavLink>
             )}
-            {user?.role === 'ADMIN' && <NavLink to="/admin">Operations</NavLink>}
+            {user?.role === 'ADMIN' && <NavLink to="/admin">Admin dashboard</NavLink>}
           </nav>
           <div className="account">
             {user ? (
@@ -198,6 +200,7 @@ function Layout() {
           <Link to="/photo-credits">
             Vehicle photo credits <ArrowUpRight size={14} />
           </Link>
+          <Link to="/admin">Admin dashboard</Link>
         </div>
       </footer>
     </>
@@ -240,6 +243,10 @@ function VehicleCard({ vehicle: v, query = '' }) {
         </div>
         <div className="vehicle-specs">
           <span>
+            <MapPin size={15} />
+            {v.city || 'Hub not assigned'}
+          </span>
+          <span>
             <Gauge size={15} />
             {titleCase(v.transmission)}
           </span>
@@ -269,6 +276,7 @@ function VehicleCard({ vehicle: v, query = '' }) {
 function SearchForm({ initial = {}, onSearch, compact = false }) {
   const f = useForm({
     type: initial.type || '',
+    locationId: initial.locationId || '',
     pickupDate: initial.pickupDate || '',
     dropoffDate: initial.dropoffDate || '',
   });
@@ -282,13 +290,14 @@ function SearchForm({ initial = {}, onSearch, compact = false }) {
     onSearch(f.values);
   };
   const clear = (e) => {
-    f.setValues({ type: '', pickupDate: '', dropoffDate: '' });
+    f.setValues({ type: '', locationId: '', pickupDate: '', dropoffDate: '' });
     f.setErrors({});
     onSearch({});
     e.currentTarget.form.elements.namedItem('type').focus();
   };
   return (
     <form noValidate className={`ride-search ${compact ? 'compact-search' : ''}`} onSubmit={submit}>
+      <LocationField allowAll {...f.bind('locationId')} />
       <Field label="Your kind of ride" {...f.bind('type')}>
         <option value="">Cars & bikes</option>
         <option value="CAR">Cars</option>
@@ -540,7 +549,7 @@ function Vehicles() {
       ) : (
         <Empty
           title="A different date, a different adventure"
-          text="No rides match this search. Try another date or vehicle type."
+          text="No rides match this search. Try another pickup hub, date or vehicle type."
         >
           <Button className="outline" onClick={() => search({})}>
             Clear filters
@@ -596,7 +605,12 @@ function VehicleDetail() {
       const b = await api('/bookings', {
         method: 'POST',
         token,
-        body: { ...f.values, vehicleId: Number(id), distanceKm: Number(f.values.distanceKm) || 0 },
+        body: {
+          ...f.values,
+          vehicleId: Number(id),
+          locationId: v.location_id,
+          distanceKm: Number(f.values.distanceKm) || 0,
+        },
       });
       setSaved(true);
       notify(`Booking #${b.bookingId} created. Your simulated payment is recorded.`);
@@ -669,6 +683,18 @@ function VehicleDetail() {
             </div>
           </div>
           <p className="muted">Registration: {v.vehicle_number}</p>
+          <div className="pickup-location">
+            <MapPin size={22} />
+            <div>
+              <b>Pickup & return: {v.city || 'Hub not assigned'}</b>
+              <p>{v.location_name}</p>
+              <p>
+                {v.location_address ||
+                  'This vehicle cannot be booked until an administrator assigns a pickup hub.'}
+              </p>
+              <Link to="/vehicles">Find a vehicle in another city</Link>
+            </div>
+          </div>
           {v.reviews?.length > 0 && (
             <section className="reviews">
               <h2>From fellow travellers</h2>
@@ -691,6 +717,12 @@ function VehicleDetail() {
           <h2>Make it your next ride.</h2>
           <p className="muted">Choose your dates. We’ll check the rest.</p>
           <form noValidate onSubmit={submit} className="stack-form">
+            <Field
+              label="Pickup & return hub"
+              value={v.city ? `${v.city} · ${v.location_name}` : 'Not assigned'}
+              readOnly
+              hint="Collect and return at this hub. Choose another vehicle to rent in a different city."
+            />
             <div className="field-row">
               <Field
                 label="Pick-up date"
@@ -736,7 +768,11 @@ function VehicleDetail() {
               <strong>{money(totalDays * v.price_per_day)}</strong>
             </div>
             <ErrorMessage message={f.error} />
-            <Button type="submit" busy={f.busy} disabled={v.status !== 'AVAILABLE'}>
+            <Button
+              type="submit"
+              busy={f.busy}
+              disabled={v.status !== 'AVAILABLE' || !v.location_id}
+            >
               {user ? 'Confirm booking' : 'Log in to book'} <ArrowUpRight size={19} />
             </Button>
             <p className="payment-note">
@@ -793,7 +829,7 @@ function AuthPage({ register = false }) {
       });
       setSession(s);
       setSaved(true);
-      navigate(destination);
+      navigate(destination === '/vehicles' && s.user.role === 'ADMIN' ? '/admin' : destination);
     } catch (e) {
       if (e.fields) f.validate(e.fields, form);
       f.setError(e.message);
@@ -1026,6 +1062,10 @@ function Bookings() {
                         #{b.booking_id}
                         {user.role === 'ADMIN' && ` · ${b.customer_name}`}
                       </small>
+                      <small>
+                        {b.pickup_location_label ||
+                          'Pickup hub not recorded for this earlier booking'}
+                      </small>
                     </td>
                     <td>
                       {displayDate(b.pickup_date)}
@@ -1137,9 +1177,10 @@ function Admin() {
     [completeError, setCompleteError] = useState(''),
     [params, setParams] = useSearchParams();
   const page = Math.max(1, Number(params.get('page')) || 1);
-  const dashboard = useData('/admin/dashboard', token, revision),
+  const refreshKey = `${revision}:${params.get('view') || 'overview'}`;
+  const dashboard = useData('/admin/dashboard', token, refreshKey),
     maintenance = useData(`/admin/maintenance?limit=11&offset=${(page - 1) * 10}`, token, revision),
-    vehicles = useData('/vehicles?limit=100', token, revision);
+    vehicles = useData('/admin/fleet?limit=100', token, refreshKey);
   const f = useForm({ vehicleId: '', type: 'Service', startDate: '', endDate: '', cost: '' });
   const d = dashboard.data;
   async function save() {
@@ -1196,13 +1237,31 @@ function Admin() {
       setConfirm(true);
     }
   }
+  if (params.get('view') === 'fleet')
+    return (
+      <div className="container page">
+        <PageTitle title="Fleet & pickup hubs" />
+        <div className="page-heading">
+          <p className="eyebrow">ADMIN DASHBOARD</p>
+          <h1>Every ride, in its place.</h1>
+          <p>Manage physical vehicles and their collection points.</p>
+        </div>
+        <AdminFleet token={token} />
+      </div>
+    );
   return (
     <div className="container page">
-      <PageTitle title="Operations" />
+      <PageTitle title="Admin dashboard" />
       <div className="page-heading">
-        <p className="eyebrow">BEHIND EVERY GOOD RIDE</p>
+        <p className="eyebrow">ADMIN DASHBOARD</p>
         <h1>Keep things moving.</h1>
         <p>Your fleet, reservations and maintenance at a glance.</p>
+      </div>
+      <AdminNavigation />
+      <div className="dashboard-refresh">
+        <Button className="small outline" onClick={() => setRevision((n) => n + 1)}>
+          Refresh dashboard
+        </Button>
       </div>
       {dashboard.loading ? (
         <Loading text="Loading fleet operations…" />
@@ -1214,7 +1273,7 @@ function Admin() {
             {[
               ['Simulated revenue', money(d.counts.revenue)],
               ['Customers', d.counts.customers],
-              ['Available rides', d.counts.availableVehicles],
+              ['In-service rides', d.counts.availableVehicles],
               ['Awaiting approval', d.counts.pendingBookings],
             ].map(([label, value]) => (
               <div key={label}>
@@ -1223,6 +1282,31 @@ function Admin() {
               </div>
             ))}
           </div>
+          <section className="city-operations" aria-label="Fleet by pickup hub">
+            {d.locations.map((l) => (
+              <Link
+                className="panel city-operation"
+                key={l.location_id}
+                to={`/admin?view=fleet&locationId=${l.location_id}`}
+              >
+                <MapPin size={22} />
+                <div>
+                  <h2>{l.city}</h2>
+                  <p>{l.name}</p>
+                  <b>
+                    {l.vehicles} vehicles · {l.available} in service
+                  </b>
+                </div>
+                <ArrowUpRight size={20} />
+              </Link>
+            ))}
+          </section>
+          {d.unassignedVehicles > 0 && (
+            <p className="error-message">
+              {d.unassignedVehicles} vehicles need a pickup hub before they can be booked.{' '}
+              <Link to="/admin?view=fleet">Assign fleet locations</Link>
+            </p>
+          )}
           <div className="admin-grid">
             <section className="panel">
               <div className="panel-heading">

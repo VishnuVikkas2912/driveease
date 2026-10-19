@@ -1,5 +1,16 @@
 # Verification — DriveEase redesign
 
+## Location-aware fleet and administrator release — 20 October 2026
+
+- 20 unique physical rental units, with 10 assigned to each demo hub in Delhi and Chennai. Shared model names retain distinct unit IDs and registration numbers; 12 model photos remain credited.
+- `npm test`: 28 backend test reports and 13 frontend tests pass. New coverage includes city filtering, wrong/missing/unassigned hub rejection, immutable booking snapshots, DB relocation guards, simultaneous relocation/reservation, vehicle create/edit validation, duplicate registrations, stale revisions, authorization and accessible editor state/error recovery.
+- `npm run build`, `npm run format:check`, `npm run test:design`, `npm run test:fleet`, `git diff --check` and strict premium audit pass.
+- Local browser: desktop 1280×800 and narrow layout, admin sign-in, city-filtered catalogue, fleet pagination, pickup-hub move confirmation and persisted edit. Restored the local test vehicle's original city. Dashboard revalidates after returning from fleet management.
+- Additive migrations 004/005 applied to the owned production Supabase database. Existing user accounts, reservations and payments remain intact; legacy booking locations are explicitly unrecorded. Created the user-authorized operations administrator with a bcrypt hash; no password committed and no licence fabricated.
+- Live production smoke: 23 API checks passed, covering readiness, 20-unit summary, both ten-unit city searches, admin/customer authorization, vehicle creation/editing, duplicate/stale rejections, wrong-hub booking, correct simulated total, overlap protection, relocation block, cancellation and historical pickup snapshot after relocation. Removed only the synthetic test account, its bookings/payment and its temporary vehicle.
+
+The original verification below remains as historical evidence of the redesign release.
+
 Verified locally on 19 October 2026 (Asia/Kolkata). The repository was cloned into `app` and changes are on `codex/driveease-redesign`.
 
 ## Automated checks

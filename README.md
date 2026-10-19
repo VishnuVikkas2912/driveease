@@ -2,6 +2,16 @@
 
 A full-stack car and bike rental project with customer bookings, simulated payments, fleet reports and maintenance management. React/Vite talks to an Express API; only the server connects to PostgreSQL (local or Supabase).
 
+## Administration and pickup locations
+
+Open `/admin` (also linked in the footer) and sign in with an explicitly provisioned administrator account. The dashboard includes city fleet counts, reservation approvals and maintenance. **Fleet & pickup hubs** supports adding vehicles, editing registration/specifications/rates/model photos, creating pickup hubs, and moving unreserved units between hubs. Lists use server pagination and restorable hub filters. Edit requests carry a revision to reject stale changes; existing reservation prices are preserved.
+
+Each physical vehicle has exactly one assigned hub. Catalogue searches filter by hub, and the booking API requires the hub to match the locked vehicle row. Pickup and return use the same hub; cross-city drop-offs are not supported. Pending/approved reservations block relocation until their rental period has ended (India calendar dates). New bookings retain an immutable hub/address snapshot. Earlier bookings without location data remain explicitly marked as not recorded; the first city allocation does not invent historical pickup details. Unassigned vehicles cannot receive new bookings. A valid stored licence covering the rental dates is required, including for an admin attempting to rent.
+
+Migrations `004_vehicle_locations.sql` and generated `005_demo_city_fleet.sql` add the location model and the authorized demo allocation without deleting existing users or reservations. Run `node scripts/migrate-locations.js --env-file /path/to/private.env` before deploying this version to an existing database. The generated fleet is ten units in each city; the demo addresses must be replaced by real collection details by adding real hubs and assigning vehicles. Reapplying the migration preserves deliberate admin allocations.
+
+For an existing registered account, an operator can use the migration runner's explicit `--admin-email` option. To create an operations-only admin without a fabricated licence, use `node scripts/create-admin.js --env-file /path/to/private.env --email admin@your-domain.example < /path/to/private-password-file`. Passwords are bcrypt-hashed and never included in source, CLI arguments or logs. Existing accounts are never overwritten by this provisioning script. Production uses the user-designated account; the development seed credentials below are local only.
+
 ## Run locally
 
 Use Node.js 24 LTS, npm and PostgreSQL. From the repository root:
@@ -9,9 +19,9 @@ Use Node.js 24 LTS, npm and PostgreSQL. From the repository root:
 ```sh
 npm run install:all
 createdb driveease_local
-psql driveease_local -v ON_ERROR_STOP=1 -f database/schema.sql
-psql driveease_local -v ON_ERROR_STOP=1 -f database/seed.sql
 cp backend/.env.example backend/.env
+npm run db:initialize
+psql driveease_local -v ON_ERROR_STOP=1 -f database/seed.sql
 ```
 
 Set a random `JWT_SECRET` of at least 32 characters in `backend/.env`. Keep the example local `DATABASE_URL`, or configure your own database. Hosted Supabase connections require `DATABASE_SSL=true`; certificate validation stays enabled. `DATABASE_CA` can supply the provider's PEM certificate if required.
@@ -61,7 +71,7 @@ The root `vercel.json` builds `frontend/dist`, routes `/api/*` to `api/index.js`
    | `JWT_SECRET`   | Unique random value, at least 32 characters                        |
    | `DATABASE_CA`  | Provider PEM certificate, only when needed                         |
 
-3. For a new empty database, run `database/schema.sql` in the Supabase SQL editor. It creates tables **inside the existing database**, not a new database. Do not rerun it on an existing initialized database. Existing installations can apply the additive read indexes in `database/migrations/001_read_indexes.sql`; no row or column migration is required.
+3. For a new empty database, run `npm run db:initialize -- --env-file /path/to/private.env`. For an existing deployment, apply the additive location migrations with `node scripts/migrate-locations.js --env-file /path/to/private.env`. Never rerun `schema.sql` on an existing initialized database.
 4. Deploy through Vercel, or run `npx vercel` from the repository root after `npx vercel login`. Inspect the preview before promoting with `npx vercel --prod`.
 5. Verify `/api/health` returns `status: ok` and `/api/ready` also returns `database: connected`. Refresh `/vehicles/1`, sign in, create a test booking, and check it as an administrator before accepting the release.
 
@@ -79,13 +89,13 @@ Use a project you own. This app connects through server-side PostgreSQL, so the 
 npm run db:initialize -- --env-file .vercel/driveease-database.env
 ```
 
-Initialization refuses a non-empty schema. It creates the schema, 12-vehicle catalogue and server-only access controls together in a transaction. It creates no accounts or development administrator. Register your own account after deployment; administrator access must be assigned deliberately. Existing users and bookings require an export from their database owner.
+Initialization refuses a non-empty schema. It creates the schema, 20-unit catalogue across Delhi and Chennai, and server-only access controls together in a transaction. It creates no accounts or development administrator. Register your own account after deployment; administrator access must be assigned deliberately. Existing users and bookings require an export from their database owner.
 
 Migration `003_server_only_access.sql` enables row-level security, makes views use caller permissions and revokes direct client-role access to DriveEase tables, views and functions. The Express server connects as the project database owner and enforces its own JWT authorization. Apply this migration only to installations using that server connection model.
 
 ### Current deployment status
 
-Live at [driveease-phi.vercel.app](https://driveease-phi.vercel.app), deployed to `medhanshs-projects-1ac9d87f/driveease`. The Express API and new user-owned Supabase database run in Mumbai. Database TLS is enforced and its certificate is verified; connection credentials and the signing secret are stored as Vercel secrets. The database starts with 6 cars and 6 bikes, without development accounts or imported users/bookings. The original database was inaccessible and was not modified. Local development keeps its own PostgreSQL configuration; production connection settings stay in ignored local Vercel files.
+Live at [driveease-phi.vercel.app](https://driveease-phi.vercel.app), deployed to `medhanshs-projects-1ac9d87f/driveease`. The Express API and user-owned Supabase database run in Mumbai. Database TLS is enforced and its certificate is verified; connection credentials and the signing secret are stored as Vercel secrets. The fleet has 20 physical units: 10 cars and 10 bikes, split into 10 units per city in Delhi and Chennai. The original database was inaccessible and was not modified. Local development keeps its own PostgreSQL configuration; production connection settings stay in ignored local Vercel files.
 
 ## Data model and behavior
 
@@ -99,7 +109,7 @@ Registration checks compact Indian driving-licence numbers in the form and API u
 
 Government reference: [Parivahan licence details service](https://parivahan.gov.in/parivahan//en/content/license-registration-details). No registration details are sent to that service by this app.
 
-Payments are simulated, with no real card or UPI collection and no real charges/refunds. Reports aggregate successful simulation records, including those associated with subsequently cancelled bookings, matching the existing project behavior. The catalogue contains 6 cars and 6 bikes with distinct, credited photographs of the real models. These are model reference photos, with colours/trim allowed to vary from the specific rental unit. See the in-app Vehicle photo credits page for source and license links. Most images are Creative Commons photographs; the Ather 450X image is an official Ather Energy product image, credited as manufacturer media rather than Creative Commons.
+Payments are simulated, with no real card or UPI collection and no real charges/refunds. Reports aggregate successful simulation records, including those associated with subsequently cancelled bookings, matching the existing project behavior. The 20 physical units use 12 distinct, credited model photographs. Shared models in different cities have different registration numbers and database IDs. These are model reference photos, with colours/trim allowed to vary from the specific rental unit. See the in-app Vehicle photo credits page for source and license links. Most images are Creative Commons photographs; the Ather 450X image is official manufacturer media.
 
 ## API
 
@@ -121,7 +131,7 @@ Road photograph: [Unsplash](https://images.unsplash.com/photo-1469854523086-cc02
 
 ## Updating the local fleet
 
-`database/fleet.json` is the canonical demo catalogue and photo attribution manifest. After editing it, run `npm run sync:fleet` to generate seed data, the additive migration and frontend credits. `npm run test:fleet` verifies generated files and distinct local WebP assets.
+`database/fleet.json` owns the 12 model-photo pairings; `database/fleet-units.json` owns the 20 demo physical units and their initial city allocation. After editing them, run `npm run sync:fleet` to generate migrations and credits. `npm run test:fleet` verifies unique unit registrations, ten units per city, generated files and distinct model photos.
 
 For an existing local installation, apply the update with:
 

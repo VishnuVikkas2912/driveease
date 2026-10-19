@@ -30,7 +30,9 @@ try {
   conn = await pool.connect();
   await conn.query('SET search_path TO public');
   await initializeEmptyDatabase(conn);
-  console.log('DriveEase initialized: 12 vehicles, 0 user accounts; client API access restricted.');
+  console.log(
+    'DriveEase initialized: 20 vehicles in two cities, 0 user accounts; client API access restricted.',
+  );
 } catch (error) {
   // Keep connection strings/passwords out of command output.
   console.error(

@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 const fleet = JSON.parse(readFileSync('database/fleet.json', 'utf8'));
+const units = JSON.parse(readFileSync('database/fleet-units.json', 'utf8'));
 const check = process.argv.includes('--check');
 const sql = (value) =>
   typeof value === 'number' ? String(value) : `'${String(value).replaceAll("'", "''")}'`;
@@ -30,6 +31,22 @@ const photos = Object.fromEntries(
   ]),
 );
 const outputs = {
+  'database/migrations/005_demo_city_fleet.sql': `-- Generated from database/fleet-units.json. Demo hubs are not verified pickup addresses.
+INSERT INTO locations(city,name,address) VALUES
+('Delhi','Delhi demo hub','Demo collection point in Delhi. Confirm pickup details with the administrator.'),
+('Chennai','Chennai demo hub','Demo collection point in Chennai. Confirm pickup details with the administrator.')
+ON CONFLICT(city,name) DO NOTHING;
+${units
+  .map((u) => {
+    const model = fleet.find((v) => v.vehicleNumber === u.modelVehicleNumber);
+    assert(model, 'Unknown unit model');
+    return `INSERT INTO vehicles(vehicle_number,brand,model,vehicle_type,year,fuel_type,transmission,price_per_day,status)
+SELECT ${sql(u.vehicleNumber)},brand,model,vehicle_type,year,fuel_type,transmission,price_per_day,'AVAILABLE' FROM vehicles WHERE vehicle_number=${sql(u.modelVehicleNumber)} ON CONFLICT(vehicle_number) DO NOTHING;
+INSERT INTO vehicle_images(vehicle_id,image_url) SELECT vehicle_id,${sql(model.imageUrl)} FROM vehicles v WHERE vehicle_number=${sql(u.vehicleNumber)} AND NOT EXISTS(SELECT 1 FROM vehicle_images i WHERE i.vehicle_id=v.vehicle_id);
+UPDATE vehicles SET location_id=(SELECT location_id FROM locations WHERE city=${sql(u.city)} AND name=${sql(u.city + ' demo hub')}) WHERE vehicle_number=${sql(u.vehicleNumber)} AND location_id IS NULL;`;
+  })
+  .join('\n')}
+`,
   'database/migrations/002_fleet_and_photos.sql': catalogueSQL,
   'database/seed.sql':
     '-- Generated: use npm run sync:fleet after editing database/fleet.json.\n' +
@@ -57,4 +74,10 @@ for (const v of fleet) {
   assert(v.credit.author && v.credit.sourceUrl && v.credit.license, 'Missing photo attribution');
 }
 assert.equal(hashes.size, fleet.length, 'Two different models reuse the same photo');
-console.log(`Fleet verified: 6 cars, 6 bikes, ${hashes.size} unique credited local photos.`);
+assert.equal(units.length, 20);
+assert.equal(new Set(units.map((u) => u.vehicleNumber)).size, 20);
+for (const city of ['Delhi', 'Chennai'])
+  assert.equal(units.filter((u) => u.city === city).length, 10);
+console.log(
+  `Fleet verified: 20 unique rental units, 10 per city, ${hashes.size} credited model photos.`,
+);
