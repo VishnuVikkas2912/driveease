@@ -1,9 +1,24 @@
 {
   "name": "driveease",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "install:all": "npm install && npm --prefix backend ci && npm --prefix frontend ci",
     "dev:backend": "npm --prefix backend run dev",
-    "dev:frontend": "npm --prefix frontend run dev"
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix backend test && npm --prefix frontend test",
+    "test:design": "node scripts/check-design.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "sync:fleet": "node scripts/sync-fleet.js",
+    "test:fleet": "node scripts/sync-fleet.js --check",
+    "db:initialize": "node scripts/initialize-database.js --empty-database"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
   }
 }

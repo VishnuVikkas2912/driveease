@@ -1,258 +1,132 @@
 # DriveEase
 
-DriveEase is a full-stack vehicle rental, booking and maintenance management system. Customers can create an account, browse cars and bikes, choose rental dates, make a simulated payment, and track bookings. Administrators can approve bookings, schedule maintenance, and monitor revenue and vehicle usage.
+A full-stack car and bike rental project with customer bookings, simulated payments, fleet reports and maintenance management. React/Vite talks to an Express API; only the server connects to PostgreSQL (local or Supabase).
 
-## Technology Stack
+## Run locally
 
-| Layer | Technology | Purpose |
-| --- | --- | --- |
-| Frontend | React, Vite, React Router | Responsive customer and admin interface |
-| Backend | Node.js, Express | REST API and business rules |
-| Database | Supabase PostgreSQL | Hosted relational data storage and reporting |
-| Authentication | JWT, bcryptjs | Secure password hashing and role-based access |
-| Database client | pg | Parameterized PostgreSQL queries and transactions |
+Use Node.js 24 LTS, npm and PostgreSQL. From the repository root:
 
-## Features
-
-### Customer
-
-- Register with driving-licence details.
-- Log in securely with JWT authentication.
-- Browse and filter available cars and bikes.
-- Select pickup and drop-off dates.
-- Receive an availability check that considers active bookings and maintenance records.
-- Create a booking with a simulated UPI, card, or cash payment.
-- View booking and payment status, and cancel pending bookings.
-- Optionally save a destination and trip distance.
-
-### Administrator
-
-- View customer, booking, revenue, and vehicle-utilization metrics.
-- Approve or reject pending bookings.
-- Schedule and track vehicle maintenance.
-- Automatically remove scheduled-maintenance vehicles from availability.
-- View maintenance history and utilization information.
-
-## Application Architecture
-
-```text
-React / Vite frontend
-        |
-        | HTTP REST requests
-        v
-Node.js / Express API
-        |
-        | parameterized SQL queries and transactions
-        v
-Supabase PostgreSQL database
-```
-
-The frontend never connects to Supabase directly. The Express API performs validation, authentication, availability checks, and database operations.
-
-## Database Design
-
-The schema contains nine normalized tables:
-
-| Table | Purpose |
-| --- | --- |
-| `users` | Customer and administrator accounts |
-| `driving_licenses` | Customer licence information; one licence per user |
-| `vehicles` | Cars and bikes with pricing, type, and availability status |
-| `vehicle_images` | Image URL records for vehicles |
-| `bookings` | Rental dates, totals, and booking status |
-| `payments` | Simulated payment records and transaction references |
-| `maintenance` | Scheduled and completed vehicle services |
-| `trip_details` | Optional destination and distance details for a booking |
-| `reviews` | Customer ratings and comments for vehicles |
-
-### DBMS Concepts Demonstrated
-
-- Primary keys, foreign keys, `UNIQUE`, `NOT NULL`, `CHECK`, and default constraints.
-- Indexed booking and maintenance date lookups.
-- Multi-table `JOIN` queries for booking details and reports.
-- Aggregate queries using `COUNT`, `SUM`, and `GROUP BY`.
-- A `booking_details` view and a `vehicle_utilization` view.
-- Maintenance triggers that update a vehicle to `MAINTENANCE` and return it to `AVAILABLE` only when all active maintenance is complete.
-- A `customer_booking_history` stored procedure.
-- A database transaction that creates the booking and payment together, rolling back when availability validation fails.
-
-## Project Structure
-
-```text
-driveease/
-├── frontend/                 # React/Vite web application
-│   └── src/
-│       ├── main.jsx          # Pages, UI flow, routing, booking forms
-│       ├── services/api.js   # API client
-│       └── styles.css        # Responsive visual design
-├── backend/                  # Express REST API
-│   └── src/
-│       ├── db/pool.js        # PostgreSQL connection pool
-│       ├── middleware/       # JWT and admin authorization middleware
-│       ├── routes/           # Auth, vehicle, booking, and admin APIs
-│       └── server.js         # API entry point
-├── database/
-│   ├── schema.sql            # Tables, views, triggers, procedure, indexes
-│   └── seed.sql              # Development vehicles and administrator account
-└── README.md
-```
-
-## Local Setup
-
-### Prerequisites
-
-- Node.js 20 or newer
-- A Supabase account and project
-- npm
-
-### 1. Create the database
-
-Create a Supabase project, open its SQL Editor, then run these files in order:
-
-1. `database/schema.sql`
-2. `database/seed.sql`
-
-The schema creates the `driveease` database automatically.
-
-### 2. Configure environment variables
-
-Copy the example files:
-
-```powershell
-Copy-Item backend\.env.example backend\.env
-Copy-Item frontend\.env.example frontend\.env
-```
-
-Update `backend/.env` with the Supabase pooled connection string from **Connect**:
-
-```env
-PORT=5001
-DATABASE_URL=postgresql://postgres.your_project:your_password@aws-0-region.pooler.supabase.com:6543/postgres
-JWT_SECRET=replace_this_with_a_long_random_secret
-```
-
-### 3. Install dependencies
-
-From the project root:
-
-```powershell
+```sh
 npm run install:all
+createdb driveease_local
+psql driveease_local -v ON_ERROR_STOP=1 -f database/schema.sql
+psql driveease_local -v ON_ERROR_STOP=1 -f database/seed.sql
+cp backend/.env.example backend/.env
 ```
 
-### 4. Start the API
+Set a random `JWT_SECRET` of at least 32 characters in `backend/.env`. Keep the example local `DATABASE_URL`, or configure your own database. Hosted Supabase connections require `DATABASE_SSL=true`; certificate validation stays enabled. `DATABASE_CA` can supply the provider's PEM certificate if required.
 
-```powershell
-cd backend
-npm run dev
+Run in separate terminals:
+
+```sh
+npm run dev:backend
+npm run dev:frontend
 ```
 
-The API runs on `http://localhost:5001`.
+Open http://localhost:5173 (or the port Vite prints). Vite proxies `/api` to port 5001, so no frontend environment file is needed. The local database already created during this redesign is `driveease_local`.
 
-### 5. Start the frontend
+The seed is **development-only**: `admin@example.com` / `Admin@123`. Create a customer through registration. Do not load that known admin account into a public production database.
 
-In another terminal:
+## Verify
 
-```powershell
-cd frontend
-npm run dev
+```sh
+npm test
+npm run build
+npm run format:check
+npm run test:design
+npm run test:fleet
+npm --prefix backend audit
+npm --prefix frontend audit
 ```
 
-Open the address Vite prints in the terminal, usually `http://localhost:5173`. Vite may choose `5174` if port `5173` is in use.
+Backend integration tests create and drop their own uniquely named PostgreSQL schema, run the actual schema and seed, and exercise HTTP routes with Supertest. They refuse non-local database hosts. Optional `TEST_DATABASE_URL` must point to a **local** PostgreSQL database; default is `postgresql://localhost/driveease_local`. Never point tests at production.
 
-## Vercel Deployment
+Coverage includes registration rollback and hashing, authorization and customer isolation, same-origin/CORS handling, filters and pagination, simultaneous reservations, overlapping and adjacent rentals, transactional payment rollback, pending-only lifecycle changes, maintenance triggers, reports and stored history. Frontend tests cover field semantics, password visibility, validation focus, duplicate-submit prevention, stale-request cancellation, date rules and axe accessibility checks. jsdom accessibility checks exclude color contrast; browser contrast and responsive review are separate.
 
-Deploy the backend and frontend as two Vercel projects from the same GitHub repository. This keeps the Supabase connection string on the server and out of browser code.
+Visual decisions and tokens: [DESIGN.md](DESIGN.md). Shared behavior and native control ownership: [UX-CONTRACT.md](UX-CONTRACT.md). Verification evidence: [verification.md](verification.md).
 
-### 1. Deploy the API
+## Deploy on Vercel
 
-1. In Vercel, choose **Add New → Project** and import this GitHub repository.
-2. Set **Root Directory** to `backend`.
-3. Add these environment variables for Production, Preview, and Development:
+### Recommended: one project, same origin
 
-```text
-DATABASE_URL=<your Supabase Transaction Pooler URI>
-JWT_SECRET=<a long random secret>
-CLIENT_URL=https://<your-frontend-project>.vercel.app
+The root `vercel.json` builds `frontend/dist`, routes `/api/*` to `api/index.js`, and handles React deep links. This avoids separate frontend/API origins. The Express handler imports the existing backend; PostgreSQL credentials never enter the browser bundle.
+
+1. Import this repository in Vercel with **Root Directory left at the repository root**. Select the **Other** framework preset so Vite auto-detection does not override the root configuration.
+2. Add server environment variables for the intended Preview/Production environment:
+
+   | Variable       | Value                                                              |
+   | -------------- | ------------------------------------------------------------------ |
+   | `DATABASE_URL` | Supabase transaction pooler URI (from your Supabase Connect panel) |
+   | `DATABASE_SSL` | `true`                                                             |
+   | `JWT_SECRET`   | Unique random value, at least 32 characters                        |
+   | `DATABASE_CA`  | Provider PEM certificate, only when needed                         |
+
+3. For a new empty database, run `database/schema.sql` in the Supabase SQL editor. It creates tables **inside the existing database**, not a new database. Do not rerun it on an existing initialized database. Existing installations can apply the additive read indexes in `database/migrations/001_read_indexes.sql`; no row or column migration is required.
+4. Deploy through Vercel, or run `npx vercel` from the repository root after `npx vercel login`. Inspect the preview before promoting with `npx vercel --prod`.
+5. Verify `/api/health` returns `status: ok` and `/api/ready` also returns `database: connected`. Refresh `/vehicles/1`, sign in, create a test booking, and check it as an administrator before accepting the release.
+
+Leave `VITE_API_URL` unset for this root deployment. `CLIENT_URL` is only needed for a deliberately separate frontend origin. `.vercelignore` excludes local environment files and test evidence.
+
+### Existing two-project deployment
+
+You may retain `backend` and `frontend` as separate Vercel project roots. Set backend `DATABASE_URL`, `DATABASE_SSL=true`, `JWT_SECRET`, and `CLIENT_URL` to the exact frontend origin. Set frontend `VITE_API_URL=https://your-api.vercel.app/api`. The frontend has its own SPA rewrite configuration. Redeploy both after changing settings.
+
+### A new, empty Supabase database
+
+Use a project you own. This app connects through server-side PostgreSQL, so the Supabase Data API can remain disabled. Store the transaction-pooler URI and `DATABASE_SSL=true` in a local ignored environment file, then run:
+
+```sh
+npm run db:initialize -- --env-file .vercel/driveease-database.env
 ```
 
-4. Deploy. Confirm `https://<your-api-project>.vercel.app/api/health` returns `{ "status": "ok" }`.
+Initialization refuses a non-empty schema. It creates the schema, 12-vehicle catalogue and server-only access controls together in a transaction. It creates no accounts or development administrator. Register your own account after deployment; administrator access must be assigned deliberately. Existing users and bookings require an export from their database owner.
 
-### 2. Deploy the frontend
+Migration `003_server_only_access.sql` enables row-level security, makes views use caller permissions and revokes direct client-role access to DriveEase tables, views and functions. The Express server connects as the project database owner and enforces its own JWT authorization. Apply this migration only to installations using that server connection model.
 
-1. Create another Vercel project from the same repository.
-2. Set **Root Directory** to `frontend`.
-3. Set the environment variable below before deploying:
+### Current deployment status
 
-```text
-VITE_API_URL=https://<your-api-project>.vercel.app/api
+Live at [driveease-phi.vercel.app](https://driveease-phi.vercel.app), deployed to `medhanshs-projects-1ac9d87f/driveease`. The Express API and new user-owned Supabase database run in Mumbai. Database TLS is enforced and its certificate is verified; connection credentials and the signing secret are stored as Vercel secrets. The database starts with 6 cars and 6 bikes, without development accounts or imported users/bookings. The original database was inaccessible and was not modified. Local development keeps its own PostgreSQL configuration; production connection settings stay in ignored local Vercel files.
+
+## Data model and behavior
+
+Nine normalized tables: users, driving_licenses, vehicles, vehicle_images, bookings, payments, maintenance, trip_details and reviews. The schema demonstrates keys, CHECK/UNIQUE constraints, indexed availability lookups, joins, aggregate views, a maintenance trigger and the `customer_booking_history` SQL function.
+
+A booking transaction locks its vehicle, checks active bookings and maintenance, computes the amount from the database daily rate, and creates the booking, simulated payment and optional trip together. Date intervals for rentals are `[pickup, return)`, so back-to-back rentals are allowed. Two concurrent overlapping requests cannot both succeed. Rejected or cancelled bookings cannot be revived by approval.
+
+Existing maintenance behavior is preserved: any scheduled/in-progress service takes the vehicle out of the available fleet. Completing the final active service restores availability. Scheduling does not cancel existing reservations; review them first. The UI provides a confirmation before scheduling or completing service.
+
+Registration checks compact Indian driving-licence numbers in the form and API using `shared/driving-license.js`. It requires a recognised current/historical state code, a two-digit RTO code (or three-digit AP/TS/TG office code), four-digit issue year and seven-digit serial, with no spaces, hyphens or other punctuation. Letters are stored uppercase. The embedded year must be between 1900 and the current year and cannot follow the supplied issue date; renewed cards can have a later issue date. Real calendar dates and unexpired licences are required. This is structural validation, not proof of government issuance, ownership, vehicle entitlement or suspension status. `license_status=VALID` reflects the project's existing declared validity model, not government verification. Genuine verification requires an authorised provider integration; no provider is currently connected. Existing licence rows are preserved.
+
+Government reference: [Parivahan licence details service](https://parivahan.gov.in/parivahan//en/content/license-registration-details). No registration details are sent to that service by this app.
+
+Payments are simulated, with no real card or UPI collection and no real charges/refunds. Reports aggregate successful simulation records, including those associated with subsequently cancelled bookings, matching the existing project behavior. The catalogue contains 6 cars and 6 bikes with distinct, credited photographs of the real models. These are model reference photos, with colours/trim allowed to vary from the specific rental unit. See the in-app Vehicle photo credits page for source and license links. Most images are Creative Commons photographs; the Ather 450X image is an official Ather Energy product image, credited as manufacturer media rather than Creative Commons.
+
+## API
+
+| Area          | Endpoint                                                              | Purpose                                  |
+| ------------- | --------------------------------------------------------------------- | ---------------------------------------- |
+| Health        | `GET /api/health`, `GET /api/ready`                                   | Process / database readiness             |
+| Auth          | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` | Customer registration and JWT sessions   |
+| Fleet         | `GET /api/vehicles`, `GET /api/vehicles/:id`                          | Available vehicles / detail and reviews  |
+| Bookings      | `POST /api/bookings`, `GET /api/bookings`                             | Transactional booking and scoped history |
+| Booking state | `PATCH /api/bookings/:id/status`, `PATCH /api/bookings/:id/cancel`    | Admin decision / customer cancellation   |
+| Operations    | `GET /api/admin/dashboard`                                            | Counts, revenue and utilization          |
+| Maintenance   | `GET/POST /api/admin/maintenance`, `PATCH /api/admin/maintenance/:id` | Schedule and track service               |
+
+Lists accept `limit` (1–101) and nonnegative `offset`. Vehicles accept type, brand, fuel, transmission, maxPrice and paired pickupDate/dropoffDate filters. The catalog uses Load more; bookings and service records use server pagination. Authentication routes have a basic per-instance rate limiter; distributed production abuse protection should be configured at the hosting edge if needed.
+
+## Asset credits
+
+Road photograph: [Unsplash](https://images.unsplash.com/photo-1469854523086-cc02fe5d8800) (asset ID `photo-1469854523086-cc02fe5d8800`, downloaded to `frontend/public/images/open-road.jpg`). Vehicle images are self-hosted WebP files, with source/author/license metadata in `database/fleet.json` and the in-app Vehicle photo credits page. Manrope and Barlow Condensed are self-hosted through Fontsource under OFL; icons use lucide-react under ISC.
+
+## Updating the local fleet
+
+`database/fleet.json` is the canonical demo catalogue and photo attribution manifest. After editing it, run `npm run sync:fleet` to generate seed data, the additive migration and frontend credits. `npm run test:fleet` verifies generated files and distinct local WebP assets.
+
+For an existing local installation, apply the update with:
+
+```sh
+psql driveease_local -v ON_ERROR_STOP=1 -f database/migrations/002_fleet_and_photos.sql
 ```
 
-4. Deploy and open the resulting Vercel URL.
-
-After the frontend URL is known, update the backend `CLIENT_URL` variable to that exact URL and redeploy the backend. Never add `DATABASE_URL`, the Supabase password, or `JWT_SECRET` to frontend variables.
-
-## Development Account
-
-After loading `database/seed.sql`, use this account for the admin workflow:
-
-```text
-Email:    admin@example.com
-Password: Admin@123
-```
-
-This is a development-only account. Change the password and JWT secret before any real deployment.
-
-## REST API Overview
-
-| Area | Endpoint | Description |
-| --- | --- | --- |
-| Health | `GET /api/health` | Confirms that the API is running |
-| Authentication | `POST /api/auth/register` | Creates a customer and driving licence |
-| Authentication | `POST /api/auth/login` | Returns a JWT session token |
-| Profile | `GET /api/auth/me` | Returns the current user profile |
-| Vehicles | `GET /api/vehicles` | Lists vehicles with type/date filters |
-| Vehicles | `GET /api/vehicles/:id` | Returns vehicle details and reviews |
-| Bookings | `POST /api/bookings` | Checks availability; creates booking and payment transactionally |
-| Bookings | `GET /api/bookings` | Lists a customer’s bookings or all bookings for admins |
-| Bookings | `PATCH /api/bookings/:id/status` | Admin approves or rejects a booking |
-| Bookings | `PATCH /api/bookings/:id/cancel` | Customer cancels a pending booking |
-| Admin | `GET /api/admin/dashboard` | Revenue, customer, availability, and utilization metrics |
-| Admin | `POST /api/admin/maintenance` | Schedules maintenance and changes availability |
-| Admin | `GET /api/admin/maintenance` | Lists maintenance records |
-
-## Booking Availability Logic
-
-Before creating a booking, the API checks that the vehicle:
-
-1. Exists and has `AVAILABLE` status.
-2. Has no overlapping `PENDING` or `APPROVED` booking.
-3. Has no overlapping `SCHEDULED` or `IN_PROGRESS` maintenance record.
-
-If all checks pass, the API calculates the rental cost, inserts the booking, inserts the payment, optionally adds trip details, and commits the transaction. Any error rolls the transaction back.
-
-## Demo Flow
-
-1. Register a new customer with valid licence details.
-2. Browse vehicles and select future rental dates.
-3. Confirm a booking and simulated payment.
-4. Log in as the administrator.
-5. Approve the customer booking.
-6. Schedule maintenance for a different vehicle.
-7. View revenue and vehicle utilization in the admin dashboard.
-
-## Team of Three Responsibilities
-
-| Member | Primary responsibility |
-| --- | --- |
-| Frontend developer | React pages, UI design, customer booking flow, API integration |
-| Backend developer | Express APIs, JWT, password hashing, booking and payment rules |
-| Database and admin developer | Schema, SQL queries, views, triggers, seed data, reports, admin workflow |
-
-Each team member should understand the end-to-end flow for the DBMS viva and final demonstration.
-
-## Security Notes
-
-- Never commit `backend/.env` or `frontend/.env`; they are ignored by Git.
-- Use a strong, unique `JWT_SECRET` outside local development.
-- Do not use the seeded admin password in production.
-- Use the Supabase pooled connection string for Vercel deployments; never expose it in frontend environment variables.
+This migration can be rerun: it inserts missing demo vehicles and changes their primary photo; it preserves existing IDs, pricing, availability, bookings and additional gallery photos. Do not rerun schema.sql or the development admin seed on an existing hosted database.

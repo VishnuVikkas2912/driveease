@@ -1,0 +1,92 @@
+{
+  "url": "https://driveease-phi.vercel.app",
+  "verifiedAt": "2026-10-18T23:12:11.030Z",
+  "checks": [
+    {
+      "path": "/auth/register",
+      "method": "POST",
+      "status": 400
+    },
+    {
+      "path": "/auth/register",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/admin/dashboard",
+      "method": "GET",
+      "status": 403
+    },
+    {
+      "path": "/vehicles/1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/bookings",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/bookings",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/bookings/1/cancel",
+      "method": "PATCH",
+      "status": 200
+    },
+    {
+      "path": "/bookings",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/auth/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/bookings/2/status",
+      "method": "PATCH",
+      "status": 200
+    },
+    {
+      "path": "/admin/dashboard",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/admin/reports",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/vehicles?limit=13",
+      "method": "GET",
+      "status": 200
+    }
+  ],
+  "photos": 12,
+  "temporaryDataRemoved": true,
+  "finalDeployment": "dpl_GHcYes5Tw5E8CGX9G4sYtfg9NW9N",
+  "finalCheckedAt": "2026-10-18T23:15:50.986Z",
+  "database": "connected",
+  "fleet": {
+    "cars": 6,
+    "bikes": 6
+  },
+  "forwardedHeaderAuthCheck": 400,
+  "runtimeWarningsOrErrors": 0
+}
