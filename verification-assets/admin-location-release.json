@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-20",
+  "productionUrl": "https://driveease-phi.vercel.app",
+  "deploymentId": "dpl_36dEcShnb6E43dCiT42aRUSeAAH7",
+  "implementationCommit": "a1dd2d9",
+  "database": "connected",
+  "vehicles": { "total": 20, "cars": 10, "bikes": 10, "Delhi": 10, "Chennai": 10 },
+  "tests": { "backendReports": 28, "frontend": 13, "liveApiChecks": 23 },
+  "temporaryTestDataRemoved": true,
+  "runtimeWarningsOrErrors": 0,
+  "browser": [
+    "production administrator sign-in",
+    "dashboard city counts and refresh after navigation",
+    "local city-filtered catalogue",
+    "local vehicle edit and hub change with persisted result",
+    "production add-vehicle validation and first-invalid focus",
+    "Escape closes editor and returns focus to Add vehicle",
+    "390px editor: dialog width 358px, document width 390px, no horizontal overflow"
+  ]
+}
