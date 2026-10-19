@@ -527,7 +527,7 @@ img {
 }
 .ride-search {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr auto;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr auto;
   align-items: start;
   gap: 25px;
   background: var(--surface);
@@ -542,6 +542,67 @@ img {
 .home-intro .ride-search {
   margin-top: -3px;
   transform: translateY(-1px);
+}
+.admin-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.dashboard-refresh {
+  margin-bottom: 20px;
+}
+.city-operations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+.city-operation {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  color: var(--primary);
+  transition: border-color 160ms;
+}
+.city-operation:hover {
+  border-color: var(--primary);
+}
+.city-operation h2,
+.city-operation p {
+  margin: 0;
+}
+.city-operation > svg:last-child {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.fleet-filter {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+}
+.fleet-filter .field {
+  min-width: min(100%, 280px);
+}
+.pickup-location {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: var(--background);
+  border-radius: var(--radius);
+  margin: 24px 0;
+}
+.pickup-location > svg {
+  flex-shrink: 0;
+}
+.pickup-location p {
+  margin: 4px 0;
+  color: var(--muted);
+}
+.pickup-location a {
+  text-decoration: underline;
 }
 .ride-search .field label {
   font-size: 10px;

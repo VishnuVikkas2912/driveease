@@ -5,6 +5,95 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 const router = Router();
 router.use(requireAuth, requireAdmin);
 router.get(
+  '/fleet',
+  asyncHandler(async (req, res) => {
+    const paging = pagination(req.query, 10);
+    if (!paging || (req.query.locationId && !positiveId(req.query.locationId)))
+      return fail(res, 400, 'Choose a valid pickup hub and page.');
+    const { rows } = await pool.query(
+      `SELECT v.*,l.city,l.name location_name,l.address location_address,(SELECT image_url FROM vehicle_images WHERE vehicle_id=v.vehicle_id ORDER BY image_id LIMIT 1) image_url,
+    EXISTS(SELECT 1 FROM bookings b WHERE b.vehicle_id=v.vehicle_id AND b.booking_status IN ('PENDING','APPROVED') AND b.dropoff_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date) location_locked
+    FROM vehicles v LEFT JOIN locations l ON l.location_id=v.location_id
+    WHERE ($1::bigint IS NULL OR v.location_id=$1) ORDER BY v.vehicle_id LIMIT $2 OFFSET $3`,
+      [req.query.locationId || null, paging.limit, paging.offset],
+    );
+    res.json(rows);
+  }),
+);
+router.post(
+  '/locations',
+  asyncHandler(async (req, res) => {
+    const { city, name, address } = req.body;
+    if (
+      ![city, name, address].every((v) => typeof v === 'string' && v.trim()) ||
+      city.length > 80 ||
+      name.length > 100 ||
+      address.length > 240
+    )
+      return fail(res, 400, 'Enter a city, hub name and pickup address within the field limits.');
+    const {
+      rows: [location],
+    } = await pool.query(
+      'INSERT INTO locations(city,name,address) VALUES($1,$2,$3) ON CONFLICT(city,name) DO NOTHING RETURNING *',
+      [city.trim(), name.trim(), address.trim()],
+    );
+    if (!location) return fail(res, 409, 'That pickup hub already exists.');
+    res.status(201).json(location);
+  }),
+);
+router.patch(
+  '/fleet/:id/location',
+  asyncHandler(async (req, res) => {
+    const { locationId, previousLocationId } = req.body;
+    if (
+      !positiveId(req.params.id) ||
+      !positiveId(locationId) ||
+      !(previousLocationId === null || positiveId(previousLocationId))
+    )
+      return fail(res, 400, 'Choose a vehicle and pickup hub, then refresh before saving.');
+    const conn = await pool.connect();
+    try {
+      await conn.query('BEGIN');
+      const {
+        rows: [v],
+      } = await conn.query('SELECT * FROM vehicles WHERE vehicle_id=$1 FOR UPDATE', [
+        req.params.id,
+      ]);
+      if (!v) {
+        await conn.query('ROLLBACK');
+        return fail(res, 404, 'Vehicle not found.');
+      }
+      if (String(v.location_id) !== String(previousLocationId)) {
+        await conn.query('ROLLBACK');
+        return fail(res, 409, 'The pickup hub changed. Refresh the fleet before saving.');
+      }
+      if (
+        !(await conn.query('SELECT 1 FROM locations WHERE location_id=$1', [locationId])).rowCount
+      ) {
+        await conn.query('ROLLBACK');
+        return fail(res, 400, 'Pickup hub not found.');
+      }
+      await conn.query('UPDATE vehicles SET location_id=$1 WHERE vehicle_id=$2', [
+        locationId,
+        req.params.id,
+      ]);
+      await conn.query('COMMIT');
+      res.json({ message: 'Pickup hub updated.' });
+    } catch (e) {
+      await conn.query('ROLLBACK');
+      if (e.code === '23514')
+        return fail(
+          res,
+          409,
+          'This vehicle has upcoming or active reservations. Resolve those reservations before moving it.',
+        );
+      throw e;
+    } finally {
+      conn.release();
+    }
+  }),
+);
+router.get(
   '/dashboard',
   asyncHandler(async (req, res) => {
     const {
@@ -18,7 +107,21 @@ router.get(
     const { rows: monthlyRevenue } = await pool.query(
       `SELECT TO_CHAR(DATE_TRUNC('month',payment_date),'Mon YYYY') label, SUM(amount) revenue FROM payments WHERE payment_status='SUCCESS' GROUP BY DATE_TRUNC('month',payment_date) ORDER BY DATE_TRUNC('month',payment_date) DESC LIMIT 6`,
     );
-    res.json({ counts, utilization, monthlyRevenue: monthlyRevenue.reverse() });
+    const { rows: locations } = await pool.query(
+      `SELECT l.location_id,l.city,l.name,COUNT(v.vehicle_id)::int vehicles,COUNT(v.vehicle_id) FILTER(WHERE v.status='AVAILABLE')::int available FROM locations l LEFT JOIN vehicles v ON v.location_id=l.location_id AND v.status<>'RETIRED' GROUP BY l.location_id ORDER BY l.city,l.name LIMIT 100`,
+    );
+    const {
+      rows: [unassigned],
+    } = await pool.query(
+      "SELECT COUNT(*)::int count FROM vehicles WHERE location_id IS NULL AND status<>'RETIRED'",
+    );
+    res.json({
+      counts,
+      utilization,
+      locations,
+      unassignedVehicles: unassigned.count,
+      monthlyRevenue: monthlyRevenue.reverse(),
+    });
   }),
 );
 router.get(

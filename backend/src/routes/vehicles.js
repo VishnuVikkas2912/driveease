@@ -2,12 +2,23 @@ import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { asyncHandler, fail, validDateRange, pagination, positiveId } from '../utils/http.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { vehicleErrors } from '../../../shared/vehicle-input.js';
 const router = Router();
-const summary = `SELECT v.*,(SELECT image_url FROM vehicle_images WHERE vehicle_id=v.vehicle_id ORDER BY image_id LIMIT 1) image_url,(SELECT ROUND(AVG(rating),1) FROM reviews WHERE vehicle_id=v.vehicle_id) rating FROM vehicles v`;
+const summary = `SELECT v.*,l.city,l.name location_name,l.address location_address,(SELECT image_url FROM vehicle_images WHERE vehicle_id=v.vehicle_id ORDER BY image_id LIMIT 1) image_url,(SELECT ROUND(AVG(rating),1) FROM reviews WHERE vehicle_id=v.vehicle_id) rating FROM vehicles v LEFT JOIN locations l ON l.location_id=v.location_id`;
+router.get(
+  '/locations',
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      'SELECT location_id,city,name,address FROM locations ORDER BY city,name LIMIT 100',
+    );
+    res.json(rows);
+  }),
+);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const { type, brand, fuel, transmission, maxPrice, pickupDate, dropoffDate } = req.query;
+    const { type, brand, fuel, transmission, maxPrice, pickupDate, dropoffDate, locationId } =
+      req.query;
     const paging = pagination(req.query);
     if (!paging) return fail(res, 400, 'Use a limit from 1 to 101 and a non-negative offset.');
     if (type && !['CAR', 'BIKE'].includes(type)) return fail(res, 400, 'Choose cars or bikes.');
@@ -15,7 +26,8 @@ router.get(
       return fail(res, 400, 'Choose today or a future pickup and a later return date.');
     if (maxPrice && (!Number.isFinite(Number(maxPrice)) || Number(maxPrice) <= 0))
       return fail(res, 400, 'Maximum price must be positive.');
-    const where = ["v.status='AVAILABLE'"],
+    if (locationId && !positiveId(locationId)) return fail(res, 400, 'Choose a valid pickup hub.');
+    const where = ["v.status='AVAILABLE'", 'v.location_id IS NOT NULL'],
       params = [];
     const add = (clause, value) => {
       params.push(value);
@@ -28,6 +40,7 @@ router.get(
       ['transmission', transmission],
     ])
       if (val) add(`v.${col}=?`, val);
+    if (locationId) add('v.location_id=?', locationId);
     if (maxPrice) add('v.price_per_day<=?', Number(maxPrice));
     if (pickupDate && dropoffDate) {
       const drop = `$${params.length + 1}`,
@@ -75,69 +88,107 @@ router.get(
   }),
 );
 // Existing administrator fleet APIs remain server-authorized.
-router.post(
-  '/',
-  requireAuth,
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const v = req.body;
-    const conn = await pool.connect();
-    try {
-      await conn.query('BEGIN');
-      const {
-        rows: [r],
-      } = await conn.query(
-        'INSERT INTO vehicles (vehicle_number,brand,model,vehicle_type,year,fuel_type,transmission,price_per_day,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING vehicle_id',
-        [
-          v.vehicleNumber,
-          v.brand,
-          v.model,
-          v.vehicleType,
-          v.year,
-          v.fuelType,
-          v.transmission,
-          v.pricePerDay,
-          v.status || 'AVAILABLE',
-        ],
-      );
-      if (v.imageUrl)
-        await conn.query('INSERT INTO vehicle_images(vehicle_id,image_url) VALUES($1,$2)', [
-          r.vehicle_id,
-          v.imageUrl,
-        ]);
-      await conn.query('COMMIT');
-      res.status(201).json({ vehicleId: r.vehicle_id });
-    } catch (e) {
-      await conn.query('ROLLBACK');
-      throw e;
-    } finally {
-      conn.release();
-    }
-  }),
-);
-router.put(
-  '/:id',
-  requireAuth,
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const v = req.body;
-    await pool.query(
-      'UPDATE vehicles SET brand=$1,model=$2,vehicle_type=$3,year=$4,fuel_type=$5,transmission=$6,price_per_day=$7,status=$8 WHERE vehicle_id=$9',
-      [
-        v.brand,
-        v.model,
-        v.vehicleType,
-        v.year,
-        v.fuelType,
-        v.transmission,
-        v.pricePerDay,
-        v.status,
-        req.params.id,
-      ],
-    );
-    res.json({ message: 'Vehicle updated.' });
-  }),
-);
+for (const method of ['post', 'put'])
+  router[method](
+    method === 'post' ? '/' : '/:id',
+    requireAuth,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
+      const v = req.body;
+      const errors = vehicleErrors(v);
+      if (Object.keys(errors).length)
+        return res.status(400).json({ message: 'Check the vehicle details.', errors });
+      if (method === 'put' && (!positiveId(req.params.id) || !positiveId(v.previousRevision)))
+        return fail(res, 400, 'Refresh the vehicle before editing it.');
+      const conn = await pool.connect();
+      try {
+        await conn.query('BEGIN');
+        if (
+          !(await conn.query('SELECT 1 FROM locations WHERE location_id=$1', [v.locationId]))
+            .rowCount
+        ) {
+          await conn.query('ROLLBACK');
+          return fail(res, 400, 'Pickup hub not found.');
+        }
+        let vehicleId;
+        if (method === 'put') {
+          const {
+            rows: [old],
+          } = await conn.query('SELECT * FROM vehicles WHERE vehicle_id=$1 FOR UPDATE', [
+            req.params.id,
+          ]);
+          if (!old) {
+            await conn.query('ROLLBACK');
+            return fail(res, 404, 'Vehicle not found.');
+          }
+          if (old.revision !== Number(v.previousRevision)) {
+            await conn.query('ROLLBACK');
+            return fail(
+              res,
+              409,
+              'This vehicle changed since you opened it. Close this form, refresh the fleet and edit again.',
+            );
+          }
+          await conn.query(
+            'UPDATE vehicles SET vehicle_number=$1,brand=$2,model=$3,vehicle_type=$4,year=$5,fuel_type=$6,transmission=$7,price_per_day=$8,location_id=$9 WHERE vehicle_id=$10',
+            [
+              v.vehicleNumber,
+              v.brand.trim(),
+              v.model.trim(),
+              v.vehicleType,
+              v.year,
+              v.fuelType,
+              v.transmission,
+              v.pricePerDay,
+              v.locationId,
+              req.params.id,
+            ],
+          );
+          vehicleId = req.params.id;
+        } else {
+          const {
+            rows: [r],
+          } = await conn.query(
+            'INSERT INTO vehicles (vehicle_number,brand,model,vehicle_type,year,fuel_type,transmission,price_per_day,status,location_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING vehicle_id',
+            [
+              v.vehicleNumber,
+              v.brand.trim(),
+              v.model.trim(),
+              v.vehicleType,
+              v.year,
+              v.fuelType,
+              v.transmission,
+              v.pricePerDay,
+              'AVAILABLE',
+              v.locationId,
+            ],
+          );
+          vehicleId = r.vehicle_id;
+        }
+        await conn.query('DELETE FROM vehicle_images WHERE vehicle_id=$1', [vehicleId]);
+        if (v.imageUrl)
+          await conn.query('INSERT INTO vehicle_images(vehicle_id,image_url) VALUES($1,$2)', [
+            vehicleId,
+            v.imageUrl,
+          ]);
+        await conn.query('COMMIT');
+        res.status(method === 'post' ? 201 : 200).json({ vehicleId });
+      } catch (e) {
+        await conn.query('ROLLBACK');
+        if (e.code === '23505')
+          return fail(res, 409, 'That registration number already belongs to a vehicle.');
+        if (e.code === '23514')
+          return fail(
+            res,
+            409,
+            'This vehicle has upcoming or active reservations and cannot change pickup hubs.',
+          );
+        throw e;
+      } finally {
+        conn.release();
+      }
+    }),
+  );
 router.delete(
   '/:id',
   requireAuth,

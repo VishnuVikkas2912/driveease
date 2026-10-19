@@ -1,0 +1,22 @@
+[
+  { "vehicleNumber": "DL01AB1234", "modelVehicleNumber": "DL01AB1234", "city": "Delhi" },
+  { "vehicleNumber": "MH12CD5678", "modelVehicleNumber": "MH12CD5678", "city": "Delhi" },
+  { "vehicleNumber": "KA05EF2468", "modelVehicleNumber": "KA05EF2468", "city": "Delhi" },
+  { "vehicleNumber": "TN09GH1357", "modelVehicleNumber": "TN09GH1357", "city": "Delhi" },
+  { "vehicleNumber": "KA01DE5101", "modelVehicleNumber": "KA01DE5101", "city": "Delhi" },
+  { "vehicleNumber": "KA01DE5102", "modelVehicleNumber": "KA01DE5102", "city": "Delhi" },
+  { "vehicleNumber": "KA01DE5103", "modelVehicleNumber": "KA01DE5103", "city": "Chennai" },
+  { "vehicleNumber": "KA01DE5104", "modelVehicleNumber": "KA01DE5104", "city": "Chennai" },
+  { "vehicleNumber": "KA01DE6101", "modelVehicleNumber": "KA01DE6101", "city": "Chennai" },
+  { "vehicleNumber": "KA01DE6102", "modelVehicleNumber": "KA01DE6102", "city": "Chennai" },
+  { "vehicleNumber": "KA01DE6103", "modelVehicleNumber": "KA01DE6103", "city": "Chennai" },
+  { "vehicleNumber": "KA01DE6104", "modelVehicleNumber": "KA01DE6104", "city": "Chennai" },
+  { "vehicleNumber": "DL01DE7001", "modelVehicleNumber": "KA01DE5103", "city": "Delhi" },
+  { "vehicleNumber": "DL01DE7002", "modelVehicleNumber": "KA01DE5104", "city": "Delhi" },
+  { "vehicleNumber": "DL01DE7003", "modelVehicleNumber": "KA01DE6101", "city": "Delhi" },
+  { "vehicleNumber": "DL01DE7004", "modelVehicleNumber": "KA01DE6102", "city": "Delhi" },
+  { "vehicleNumber": "TN09DE8001", "modelVehicleNumber": "DL01AB1234", "city": "Chennai" },
+  { "vehicleNumber": "TN09DE8002", "modelVehicleNumber": "MH12CD5678", "city": "Chennai" },
+  { "vehicleNumber": "TN09DE8003", "modelVehicleNumber": "KA05EF2468", "city": "Chennai" },
+  { "vehicleNumber": "TN09DE8004", "modelVehicleNumber": "TN09GH1357", "city": "Chennai" }
+]

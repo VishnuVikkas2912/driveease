@@ -10,6 +10,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const {
       vehicleId,
+      locationId,
       pickupDate,
       dropoffDate,
       paymentMethod = 'CARD',
@@ -17,6 +18,7 @@ router.post(
       distanceKm,
     } = req.body;
     if (!positiveId(vehicleId)) return fail(res, 400, 'Choose a valid vehicle.');
+    if (!positiveId(locationId)) return fail(res, 400, 'Choose the vehicle’s pickup hub.');
     if (!validDateRange(pickupDate, dropoffDate))
       return fail(res, 400, 'Choose today or a future pickup and a later return date.');
     if (!['CARD', 'UPI', 'CASH'].includes(paymentMethod))
@@ -33,6 +35,17 @@ router.post(
     const conn = await pool.connect();
     try {
       await conn.query('BEGIN');
+      const licence = await conn.query(
+        "SELECT 1 FROM driving_licenses WHERE user_id=$1 AND license_status='VALID' AND issue_date <= $2 AND expiry_date >= $3",
+        [req.user.id, pickupDate, dropoffDate],
+      );
+      if (!licence.rowCount)
+        throw Object.assign(
+          new Error(
+            'A valid driving licence covering your rental dates is required to book. Contact the administrator to complete your licence details.',
+          ),
+          { status: 403 },
+        );
       const {
         rows: [vehicle],
       } = await conn.query('SELECT * FROM vehicles WHERE vehicle_id=$1 FOR UPDATE', [vehicleId]);
@@ -40,6 +53,13 @@ router.post(
         throw Object.assign(new Error('Vehicle is unavailable. Choose another ride.'), {
           status: 409,
         });
+      if (!vehicle.location_id || String(vehicle.location_id) !== String(locationId))
+        throw Object.assign(
+          new Error(
+            'This vehicle is not at that pickup hub. Refresh the vehicle and choose its assigned location.',
+          ),
+          { status: 409 },
+        );
       const { rows: conflicts } = await conn.query(
         `SELECT 1 FROM bookings WHERE vehicle_id=$1 AND booking_status IN ('PENDING','APPROVED') AND pickup_date < $2 AND dropoff_date > $3 UNION ALL SELECT 1 FROM maintenance WHERE vehicle_id=$1 AND maintenance_status IN ('SCHEDULED','IN_PROGRESS') AND start_date < $2 AND COALESCE(end_date,DATE '9999-12-31') >= $3 LIMIT 1`,
         [vehicleId, dropoffDate, pickupDate],
@@ -56,8 +76,8 @@ router.post(
       const {
         rows: [b],
       } = await conn.query(
-        "INSERT INTO bookings(user_id,vehicle_id,pickup_date,dropoff_date,total_amount,booking_status) VALUES($1,$2,$3,$4,$5,'PENDING') RETURNING booking_id",
-        [req.user.id, vehicleId, pickupDate, dropoffDate, total],
+        "INSERT INTO bookings(user_id,vehicle_id,pickup_date,dropoff_date,total_amount,booking_status,pickup_location_id) VALUES($1,$2,$3,$4,$5,'PENDING',$6) RETURNING booking_id",
+        [req.user.id, vehicleId, pickupDate, dropoffDate, total, locationId],
       );
       const ref = `SIM-${Date.now()}-${b.booking_id}`;
       await conn.query(
